@@ -6,6 +6,27 @@
 #include "easy-connect.h"
 #include "http_request.h"
 
+
+#include <string>
+#include <vector>
+#include <map>
+#include "http_parser.h"
+#include "http_response.h"
+#include "http_request_builder.h"
+#include "http_response_parser.h"
+#include "http_parsed_url.h"
+
+#include "mbedtls/platform.h"
+#include "mbedtls/ssl.h"
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/error.h"
+
+#include "mbedtls/sha1.h"
+
+mbedtls_sha1_context httpBodyHashCtx;
+unsigned char hashOutput[20];
+
 Serial pc(USBTX, USBRX);
 
 void dump_response(HttpResponse* res) {
@@ -18,6 +39,7 @@ void dump_response(HttpResponse* res) {
     printf("\nBody (%d bytes):\n\n%s\n", res->get_body_length(), res->get_body_as_string().c_str());
 }
 
+// [Ref-Source](https://gist.github.com/ccbrown/9722406)
 void DumpHex(const void* data, size_t size) {
     char ascii[17];
     size_t i, j;
@@ -57,9 +79,13 @@ static void on_body_cb(const char *at, size_t length)
     printf("%sStart body%s\r\n", startMark, startMark);
     DumpHex(at, length);
     printf("%sEnd body%s\r\n", endMark, endMark);
+    mbedtls_sha1_update(&httpBodyHashCtx, (const unsigned char*)at, length);
 }
 
 int main() {
+    mbedtls_sha1_init(&httpBodyHashCtx);
+    mbedtls_sha1_starts(&httpBodyHashCtx);
+
     pc.baud(115200);
     // Connect to the network (see mbed_app.json for the connectivity method used)
     NetworkInterface* network = easy_connect(true);
@@ -86,6 +112,9 @@ int main() {
         delete get_req;
     }
 
+    mbedtls_sha1_finish(&httpBodyHashCtx, hashOutput);
+    printf("Sha1: \r\n");
+    DumpHex(hashOutput, sizeof(hashOutput));
 
     Thread::wait(osWaitForever);
 }

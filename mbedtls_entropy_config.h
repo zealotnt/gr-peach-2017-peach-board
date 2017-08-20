@@ -27,7 +27,7 @@
 #undef MBEDTLS_TEST_NULL_ENTROPY
 #endif
 
-#if DEMO == DEMO_HTTPS
+// #if DEMO == DEMO_HTTPS
 
 #if !defined(MBEDTLS_ENTROPY_HARDWARE_ALT) && \
     !defined(MBEDTLS_ENTROPY_NV_SEED) && !defined(MBEDTLS_TEST_NULL_ENTROPY)
@@ -57,4 +57,4 @@
 
 #define MBEDTLS_MPI_WINDOW_SIZE     1
 
-#endif
+// #endif
