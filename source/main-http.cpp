@@ -18,6 +18,47 @@ void dump_response(HttpResponse* res) {
     printf("\nBody (%d bytes):\n\n%s\n", res->get_body_length(), res->get_body_as_string().c_str());
 }
 
+void DumpHex(const void* data, size_t size) {
+    char ascii[17];
+    size_t i, j;
+    ascii[16] = '\0';
+    for (i = 0; i < size; ++i) {
+        printf("%02X ", ((unsigned char*)data)[i]);
+        if (((unsigned char*)data)[i] >= ' ' && ((unsigned char*)data)[i] <= '~') {
+            ascii[i % 16] = ((unsigned char*)data)[i];
+        } else {
+            ascii[i % 16] = '.';
+        }
+        if ((i+1) % 8 == 0 || i+1 == size) {
+            printf(" ");
+            if ((i+1) % 16 == 0) {
+                printf("|  %s \n", ascii);
+            } else if (i+1 == size) {
+                ascii[(i+1) % 16] = '\0';
+                if ((i+1) % 16 <= 8) {
+                    printf(" ");
+                }
+                for (j = (i+1) % 16; j < 16; ++j) {
+                    printf("   ");
+                }
+                printf("|  %s \n", ascii);
+            }
+        }
+    }
+}
+
+static void on_body_cb(const char *at, size_t length)
+{
+    char *startMark = ">>>>>>";
+    char *endMark = "<<<<<<";
+
+    // return audio_stream_consumer(at, length, parser->data);
+    printf("On body: %d\r\n", length);
+    printf("%sStart body%s\r\n", startMark, startMark);
+    DumpHex(at, length);
+    printf("%sEnd body%s\r\n", endMark, endMark);
+}
+
 int main() {
     pc.baud(115200);
     // Connect to the network (see mbed_app.json for the connectivity method used)
@@ -31,7 +72,7 @@ int main() {
     {
         // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
         // To receive chunked response, pass in a callback as last parameter to the constructor.
-        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://httpbin.org/status/418");
+        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://192.168.1.162:8080", on_body_cb);
 
         HttpResponse* get_res = get_req->send();
         if (!get_res) {
@@ -45,24 +86,6 @@ int main() {
         delete get_req;
     }
 
-    // POST request to httpbin.org
-    {
-        HttpRequest* post_req = new HttpRequest(network, HTTP_POST, "http://httpbin.org/post");
-        post_req->set_header("Content-Type", "application/json");
-
-        const char body[] = "{\"hello\":\"world\"}";
-
-        HttpResponse* post_res = post_req->send(body, strlen(body));
-        if (!post_res) {
-            printf("HttpRequest failed (error code %d)\n", post_req->get_error());
-            return 1;
-        }
-
-        printf("\n----- HTTP POST response -----\n");
-        dump_response(post_res);
-
-        delete post_req;
-    }
 
     Thread::wait(osWaitForever);
 }

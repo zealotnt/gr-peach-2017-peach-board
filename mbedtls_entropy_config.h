@@ -43,6 +43,10 @@
 #define MBEDTLS_RSA_C
 #endif /* !MBEDTLS_RSA_C */
 
+#if !defined(MBEDTLS_MD5_C)
+#define MBEDTLS_MD5_C
+#endif /* !MBEDTLS_MD5_C */
+
 /*
  *  This value is sufficient for handling 2048 bit RSA keys.
  *

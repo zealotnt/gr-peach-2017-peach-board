@@ -7,5 +7,6 @@
 #define         DEMO_HTTPS_SOCKET_REUSE     4
 
 #define         DEMO            DEMO_HTTP
+// #define         DEMO            DEMO_HTTPS
 
 #endif // _SELECT_METHOD_H_
