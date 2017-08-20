@@ -1,0 +1,55 @@
+{
+    "config": {
+        "network-interface": {
+            "help": "options are ETHERNET,WIFI_ESP8266,MESH_LOWPAN_ND,MESH_THREAD",
+            "value": "ETHERNET"
+        },
+        "mesh_radio_type": {
+        	"help": "options are ATMEL, MCR20",
+        	"value": "ATMEL"
+        },
+        "esp8266-tx": {
+            "help": "Pin used as TX (connects to ESP8266 RX)",
+            "value": "D1"
+        },
+        "esp8266-rx": {
+            "help": "Pin used as RX (connects to ESP8266 TX)",
+            "value": "D0"
+        },
+        "esp8266-debug": {
+            "value": false
+        },  
+        "wifi-ssid": {
+            "value": "\"SSID\""
+        },
+        "wifi-password": {
+            "value": "\"Password\""
+        }
+    },
+    "macros": ["MBEDTLS_USER_CONFIG_FILE=\"mbedtls_entropy_config.h\"", 
+               "MBEDTLS_TEST_NULL_ENTROPY", "MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES" ],
+    "target_overrides": {
+        "*": {
+            "target.features_add": ["NANOSTACK", "LOWPAN_ROUTER", "COMMON_PAL"],
+            "mbed-mesh-api.6lowpan-nd-channel-page": 0,
+            "mbed-mesh-api.6lowpan-nd-channel": 12,
+            "mbed-trace.enable": 0,
+            "mbed-http.http-buffer-size": 2048
+        },
+        "HEXIWEAR": {
+            "esp8266-tx": "PTD3",
+            "esp8266-rx": "PTD2"
+        },
+        "NUCLEO_F401RE": {
+            "esp8266-tx": "D8",
+            "esp8266-rx": "D2"
+        },
+        "RZ_A1H": {
+            "target.macros_add": ["MBEDTLS_TEST_NULL_ENTROPY", "MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES"]
+        },
+        "NUCLEO_F411RE": {
+            "esp8266-tx": "D8",
+            "esp8266-rx": "D2"
+        }
+    }
+}

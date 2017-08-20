@@ -1,0 +1,10 @@
+^\.mbed$
+.vscode/
+mbed_settings.*
+BUILD/
+.build/
+mbed-os/
+easy-connect/
+mbed-http/
+.git/
+

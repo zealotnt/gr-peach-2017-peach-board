@@ -1,0 +1,7 @@
+.mbed
+.vscode/
+mbed_settings.*
+BUILD/
+.build/
+.hg/*
+*/.hg/*
