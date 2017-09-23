@@ -112,6 +112,14 @@ static void on_body_cb(const char *at, size_t length)
     mbedtls_sha1_update(&httpBodyHashCtx, (const unsigned char*)at, length);
 }
 
+FILE * fp_download = NULL;
+uint32_t totalDownload = 0;
+static void on_body_save_file_cb(const char *at, size_t length)
+{
+    int written = fwrite(at, length, 1, fp_download);
+    totalDownload += length;
+}
+
 int main_save_file();
 int main_wav_player();
 int main_http();
@@ -119,12 +127,41 @@ int main_download_and_save_file();
 
 int main() {
     // return main_http();
-    return main_save_file();
+    // return main_save_file();
     // return main_wav_player();
-    // return main_download_and_save_file();
+    return main_download_and_save_file();
 }
 
 int main_download_and_save_file() {
+    pc.baud(115200);
+    printf("Get Wav file\r\n");
+    DIR  * d = NULL;
+    char file_path[sizeof(FLD_PATH) + FILE_NAME_LEN];
+    FATFileSystem fs("usb");
+    USBHostMSD msd;
+
+    //Audio Shield USB1 enable
+    usb1en = 1;        //Outputs high level
+    Thread::wait(5);
+    usb1en = 0;        //Outputs low level
+
+    // try to connect a MSD device
+    printf("Waiting for usb\r\n");
+    while(!msd.connect()) {
+        Thread::wait(500);
+    }
+
+    printf("USB connected \r\n");
+    // Now that the MSD device is connected, file system is mounted.
+    fs.mount(&msd);
+
+    strcpy(file_path, FLD_PATH);
+    strcat(file_path, "file_to_write.txt");
+    fp_download = fopen(file_path, "w");
+    if (fp_download == NULL) {
+        printf("open %s to write failed\r\n", file_path);
+    }
+
     // Connect to the network (see mbed_app.json for the connectivity method used)
     NetworkInterface* network = easy_connect(true);
     if (!network) {
@@ -136,7 +173,7 @@ int main_download_and_save_file() {
     {
         // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
         // To receive chunked response, pass in a callback as last parameter to the constructor.
-        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://192.168.1.162:8080", on_body_cb);
+        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://192.168.1.162:8080", on_body_save_file_cb);
 
         HttpResponse* get_res = get_req->send();
         if (!get_res) {
@@ -149,6 +186,12 @@ int main_download_and_save_file() {
 
         delete get_req;
     }
+    printf("Download %d bytes\r\n", totalDownload);
+
+    fclose(fp_download);
+    fs.unmount();
+    printf("Download done, loop forerver\r\n");
+    Thread::wait(osWaitForever);
 }
 
 int main_save_file() {
