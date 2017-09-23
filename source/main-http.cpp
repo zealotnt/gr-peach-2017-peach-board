@@ -124,12 +124,14 @@ int main_save_file();
 int main_wav_player();
 int main_http();
 int main_download_and_save_file();
+int main_wav_player_func();
 
 int main() {
     // return main_http();
     // return main_save_file();
     // return main_wav_player();
-    return main_download_and_save_file();
+    // return main_download_and_save_file();
+    return main_wav_player_func();
 }
 
 int main_download_and_save_file() {
@@ -235,9 +237,101 @@ int main_save_file() {
     Thread::wait(osWaitForever);
 }
 
+int playWavFile(char *fileName) {
+    FILE * fp = NULL;
+    dec_wav wav_file;
+    int buff_index = 0;
+    size_t audio_data_size;
+    rbsp_data_conf_t audio_write_async_ctl = {&callback_audio_write_end, NULL};
+
+    if (fileName == NULL) {
+        return -1;
+    }
+
+    char file_path[sizeof(FLD_PATH) + FILE_NAME_LEN];
+
+    strcpy(file_path, FLD_PATH);
+    strcat(file_path, fileName);
+
+    fp = fopen(file_path, "r");
+    if (wav_file.AnalyzeHeder(title_buf, artist_buf, album_buf,
+                               TEXT_SIZE, fp) == false) {
+        fclose(fp);
+        fp = NULL;
+    } else if ((wav_file.GetChannel() != 2)
+            || (audio.format(wav_file.GetBlockSize()) == false)
+            || (audio.frequency(wav_file.GetSamplingRate()) == false)) {
+        printf("Error File  :%s\n", fileName);
+        printf("Audio Info  :%dch, %dbit, %dHz\n", wav_file.GetChannel(),
+                wav_file.GetBlockSize(), wav_file.GetSamplingRate());
+        printf("\n");
+        fclose(fp);
+        fp = NULL;
+    } else {
+        printf("File        :%s\n", fileName);
+        printf("Audio Info  :%dch, %dbit, %dHz\n", wav_file.GetChannel(),
+                wav_file.GetBlockSize(), wav_file.GetSamplingRate());
+        printf("Title       :%s\n", title_buf);
+        printf("Artist      :%s\n", artist_buf);
+        printf("Album       :%s\n", album_buf);
+        printf("\n");
+    }
+
+    while (1) {
+        // file read
+        uint8_t * p_buf = audio_write_buff[buff_index];
+
+        audio_data_size = wav_file.GetNextData(p_buf, AUDIO_WRITE_BUFF_SIZE);
+        if (audio_data_size > 0) {
+            audio.write(p_buf, audio_data_size, &audio_write_async_ctl);
+            buff_index++;
+            if (buff_index >= AUDIO_WRITE_BUFF_NUM) {
+                buff_index = 0;
+            }
+        }
+
+        // file close
+        if ((audio_data_size < AUDIO_WRITE_BUFF_SIZE) || (button == 0)) {
+            fclose(fp);
+            fp = NULL;
+            Thread::wait(500);
+            printf("Done playing file\r\n");
+            return 0;
+        }
+    }
+}
+
+int main_wav_player_func() {
+    pc.baud(115200);
+    printf("main_wav_player_func\r\n");
+
+    FATFileSystem fs("usb");
+    USBHostMSD msd;
+
+    //Audio Shield USB1 enable
+    usb1en = 1;        //Outputs high level
+    Thread::wait(5);
+    usb1en = 0;        //Outputs low level
+
+    audio.power(0x02); // mic off
+    audio.inputVolume(0.7, 0.7);
+
+    // try to connect a MSD device
+    printf("Waiting for usb\r\n");
+    while(!msd.connect()) {
+        Thread::wait(500);
+    }
+
+    printf("USB connected \r\n");
+    // Now that the MSD device is connected, file system is mounted.
+    fs.mount(&msd);
+
+    playWavFile("NoiNayCoAnh.wav");
+}
+
 int main_wav_player() {
     pc.baud(115200);
-    printf("Hello world\r\n");
+    printf("main_wav_player\r\n");
     rbsp_data_conf_t audio_write_async_ctl = {&callback_audio_write_end, NULL};
     FILE * fp = NULL;
     DIR  * d = NULL;
