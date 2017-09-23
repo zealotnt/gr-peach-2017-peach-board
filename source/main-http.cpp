@@ -112,7 +112,87 @@ static void on_body_cb(const char *at, size_t length)
     mbedtls_sha1_update(&httpBodyHashCtx, (const unsigned char*)at, length);
 }
 
+int main_save_file();
+int main_wav_player();
+int main_http();
+int main_download_and_save_file();
+
 int main() {
+    // return main_http();
+    return main_save_file();
+    // return main_wav_player();
+    // return main_download_and_save_file();
+}
+
+int main_download_and_save_file() {
+    // Connect to the network (see mbed_app.json for the connectivity method used)
+    NetworkInterface* network = easy_connect(true);
+    if (!network) {
+        printf("Cannot connect to the network, see serial output");
+        return 1;
+    }
+
+    // Do a GET request to wav file
+    {
+        // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
+        // To receive chunked response, pass in a callback as last parameter to the constructor.
+        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://192.168.1.162:8080", on_body_cb);
+
+        HttpResponse* get_res = get_req->send();
+        if (!get_res) {
+            printf("HttpRequest failed (error code %d)\n", get_req->get_error());
+            return 1;
+        }
+
+        printf("\n----- HTTP GET response -----\n");
+        dump_response(get_res);
+
+        delete get_req;
+    }
+}
+
+int main_save_file() {
+    pc.baud(115200);
+    printf("Get Wav file\r\n");
+    FILE * fp = NULL;
+    DIR  * d = NULL;
+    char file_path[sizeof(FLD_PATH) + FILE_NAME_LEN];
+    FATFileSystem fs("usb");
+    USBHostMSD msd;
+
+    //Audio Shield USB1 enable
+    usb1en = 1;        //Outputs high level
+    Thread::wait(5);
+    usb1en = 0;        //Outputs low level
+
+    // try to connect a MSD device
+    printf("Waiting for usb\r\n");
+    while(!msd.connect()) {
+        Thread::wait(500);
+    }
+
+    printf("USB connected \r\n");
+    // Now that the MSD device is connected, file system is mounted.
+    fs.mount(&msd);
+
+    strcpy(file_path, FLD_PATH);
+    strcat(file_path, "file_to_write.txt");
+    fp = fopen(file_path, "w");
+    if (fp == NULL) {
+        printf("open %s to write failed\r\n", file_path);
+    }
+
+    char *data_to_write = "Hello world";
+    int written = fwrite(data_to_write, strlen(data_to_write), 1, fp);
+    printf("Write %d bytes to file\r\n", written*strlen(data_to_write));
+    fclose(fp);
+
+    printf("Write done, loop forerver\r\n");
+    fs.unmount();
+    Thread::wait(osWaitForever);
+}
+
+int main_wav_player() {
     pc.baud(115200);
     printf("Hello world\r\n");
     rbsp_data_conf_t audio_write_async_ctl = {&callback_audio_write_end, NULL};
@@ -164,6 +244,7 @@ int main() {
                         && (memcmp(&p->d_name[len - 4], ".wav", 4) == 0)) {
                         strcpy(file_path, FLD_PATH);
                         strcat(file_path, p->d_name);
+                        printf("Opening path: \"%s\"\r\n", file_path);
                         fp = fopen(file_path, "r");
                         if (wav_file.AnalyzeHeder(title_buf, artist_buf, album_buf,
                                                    TEXT_SIZE, fp) == false) {
