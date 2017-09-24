@@ -52,7 +52,9 @@ DigitalIn  button(USER_BUTTON0);
 DigitalOut usb1en(P3_8);
 mbedtls_sha1_context httpBodyHashCtx;
 unsigned char hashOutput[20];
-Serial pc(USBTX, USBRX);
+Serial pc(USBTX, USBRX, 115200);
+
+int playWavFile(char *fileName);
 
 static void callback_audio_write_end(void * p_data, int32_t result, void * p_app_data) {
     if (result < 0) {
@@ -131,8 +133,8 @@ int main() {
     // return main_http();
     // return main_save_file();
     // return main_wav_player();
-    // return main_download_and_save_file();
-    return main_wav_player_func();
+    return main_download_and_save_file();
+    // return main_wav_player_func();
 }
 
 int main_download_and_save_file() {
@@ -147,6 +149,9 @@ int main_download_and_save_file() {
     usb1en = 1;        //Outputs high level
     Thread::wait(5);
     usb1en = 0;        //Outputs low level
+
+    audio.power(0x02); // mic off
+    audio.inputVolume(0.7, 0.7);
 
     // try to connect a MSD device
     printf("Waiting for usb\r\n");
@@ -192,8 +197,11 @@ int main_download_and_save_file() {
     printf("Download %d bytes\r\n", totalDownload);
 
     fclose(fp_download);
+
+    printf("Download done, play file\r\n");
+    playWavFile("file_to_write.txt");
+    printf("Play done, loop forerver\r\n");
     fs.unmount();
-    printf("Download done, loop forerver\r\n");
     Thread::wait(osWaitForever);
 }
 
@@ -240,7 +248,7 @@ int main_save_file() {
 
 int playWavFile(char *fileName) {
     FILE * fp = NULL;
-    dec_wav_http wav_file;
+    dec_wav wav_file;
     int buff_index = 0;
     size_t audio_data_size;
     rbsp_data_conf_t audio_write_async_ctl = {&callback_audio_write_end, NULL};
