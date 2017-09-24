@@ -1,5 +1,5 @@
 /**************************************************************************//**
-* @file          dec_wav.h
+* @file          dev_wav.h
 * @brief         wav
 ******************************************************************************/
 #include "mbed.h"
@@ -20,6 +20,7 @@ public:
      * @return true = success, false = failure
      */
     bool AnalyzeHeder(uint8_t * p_title, uint8_t * p_artist, uint8_t * p_album, uint16_t tag_size, FILE * fp) {
+        printf("dec_wav AnalyzeHeder\r\n");
         bool result = false;
         size_t read_size;
         uint8_t wk_read_buff[36];
@@ -31,6 +32,7 @@ public:
         uint32_t read_index = 0;
         uint32_t data_index = 0;
         uint16_t wk_len;
+        uint8_t while_loop = 0;
 
         if (fp == NULL) {
             return false;
@@ -66,9 +68,12 @@ public:
                           + ((uint32_t)wk_read_buff[27] << 24);
             block_size = ((uint32_t)wk_read_buff[34] << 0) + ((uint32_t)wk_read_buff[35] << 8);
             while (1) {
+                printf("loop=%d\r\n", while_loop);
+                while_loop ++;
                 read_size = fread(&wk_read_buff[0], sizeof(char), 8, wav_fp);
                 read_index += 8;
                 if (read_size < 8) {
+                    printf("Out of thing to read (left %d), break\r\n", read_size);
                     break;
                 } else {
                     chunk_size = ((uint32_t)wk_read_buff[4] << 0)
@@ -82,6 +87,7 @@ public:
                             break;
                         } else {
                             data_index = read_index;
+                            printf("fseek %d, %d\r\n", __LINE__, chunk_size);
                             fseek(wav_fp, chunk_size, SEEK_CUR);
                             read_index += chunk_size;
                         }
@@ -116,6 +122,7 @@ public:
                                 }
                                 read_size = fread(data, sizeof(char), wk_len, wav_fp);
                                 read_index += sub_chunk_size;
+                                printf("fseek %d\r\n", __LINE__);
                                 fseek(wav_fp, read_index, SEEK_SET);
                                 data[wk_len] = '\0';
                             }
@@ -123,9 +130,11 @@ public:
                         if (data_index != 0) {
                             break;
                         } else {
+                            printf("fseek %d\r\n", __LINE__);
                             fseek(wav_fp, list_index_max, SEEK_SET);
                         }
                     } else {
+                        printf("fseek %d\r\n", __LINE__);
                         fseek(wav_fp, chunk_size, SEEK_CUR);
                         read_index += chunk_size;
                     }
@@ -133,6 +142,7 @@ public:
             }
 
             if (data_index != 0) {
+                printf("fseek %d, %d\r\n", __LINE__, data_index);
                 fseek(wav_fp, data_index, SEEK_SET);
             }
         }

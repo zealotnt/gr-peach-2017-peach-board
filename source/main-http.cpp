@@ -28,6 +28,7 @@
 #include "USBHostMSD.h"
 #include "usb_host_setting.h"
 #include "dec_wav.h"
+#include "dev_wav_http.h"
 
 #define USB_HOST_CH     1
 #define DUMP_HTTP_BODY 0
@@ -239,7 +240,7 @@ int main_save_file() {
 
 int playWavFile(char *fileName) {
     FILE * fp = NULL;
-    dec_wav wav_file;
+    dec_wav_http wav_file;
     int buff_index = 0;
     size_t audio_data_size;
     rbsp_data_conf_t audio_write_async_ctl = {&callback_audio_write_end, NULL};
