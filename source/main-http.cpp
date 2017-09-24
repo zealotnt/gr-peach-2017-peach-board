@@ -163,13 +163,6 @@ int main_download_and_save_file() {
     // Now that the MSD device is connected, file system is mounted.
     fs.mount(&msd);
 
-    strcpy(file_path, FLD_PATH);
-    strcat(file_path, "file_to_write.txt");
-    fp_download = fopen(file_path, "w");
-    if (fp_download == NULL) {
-        printf("open %s to write failed\r\n", file_path);
-    }
-
     // Connect to the network (see mbed_app.json for the connectivity method used)
     NetworkInterface* network = easy_connect(true);
     if (!network) {
@@ -177,30 +170,46 @@ int main_download_and_save_file() {
         return 1;
     }
 
-    // Do a GET request to wav file
-    {
-        // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
-        // To receive chunked response, pass in a callback as last parameter to the constructor.
-        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://192.168.1.162:8080", on_body_save_file_cb);
+    while (1) {
+        printf("Wait for button\r\n");
+        while (button.read() == 1) {
+            Thread::wait(100);
+        }
+        printf("Button press\r\n");
 
-        HttpResponse* get_res = get_req->send();
-        if (!get_res) {
-            printf("HttpRequest failed (error code %d)\n", get_req->get_error());
-            return 1;
+        strcpy(file_path, FLD_PATH);
+        strcat(file_path, "file_to_write.txt");
+        fp_download = fopen(file_path, "w");
+        if (fp_download == NULL) {
+            printf("open %s to write failed\r\n", file_path);
         }
 
-        printf("\n----- HTTP GET response -----\n");
-        dump_response(get_res);
+        // Do a GET request to wav file
+        {
+            // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
+            // To receive chunked response, pass in a callback as last parameter to the constructor.
+            HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://192.168.1.162:8080", on_body_save_file_cb);
 
-        delete get_req;
+            HttpResponse* get_res = get_req->send();
+            if (!get_res) {
+                printf("HttpRequest failed (error code %d)\n", get_req->get_error());
+                delete get_req;
+                continue;
+            }
+
+            printf("\n----- HTTP GET response -----\n");
+            dump_response(get_res);
+
+            delete get_req;
+        }
+        printf("Download %d bytes\r\n", totalDownload);
+
+        fclose(fp_download);
+
+        printf("Download done, play file\r\n");
+        playWavFile("file_to_write.txt");
     }
-    printf("Download %d bytes\r\n", totalDownload);
 
-    fclose(fp_download);
-
-    printf("Download done, play file\r\n");
-    playWavFile("file_to_write.txt");
-    printf("Play done, loop forerver\r\n");
     fs.unmount();
     Thread::wait(osWaitForever);
 }
