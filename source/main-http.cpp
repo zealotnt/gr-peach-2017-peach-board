@@ -31,7 +31,7 @@
 #include "dev_wav_http.h"
 
 #define USB_HOST_CH     1
-#define DUMP_HTTP_BODY 0
+#define DUMP_HTTP_BODY 1
 
 #define AUDIO_WRITE_BUFF_SIZE  (4096)
 #define AUDIO_WRITE_BUFF_NUM   (9)
@@ -128,14 +128,102 @@ int main_wav_player();
 int main_http();
 int main_download_and_save_file();
 int main_wav_player_func();
+int main_broadcast_receive();
+int main_test_json();
 
 int main() {
     // return main_http();
     // return main_save_file();
     // return main_wav_player();
-    return main_download_and_save_file();
+    // return main_download_and_save_file();
     // return main_wav_player_func();
+    // return main_broadcast_receive();
+    return main_test_json();
 }
+
+#include "Json.h"
+
+#define logError(...)       printf(__VAR_ARGS__); printf("\r\n");
+#define logInfo(...)        printf(__VAR_ARGS__); printf("\r\n");
+
+int main_test_json() {
+    // Note that the JSON object is 'escaped'.  One doesn't get escaped JSON
+    // directly from the webservice, if the response type is APPLICATION/JSON
+    // Just a little thing to keep in mind.
+    const char * jsonSource = "{\"team\":\"Night Crue\",\"company\":\"TechShop\",\"city\":\"San Jose\",\"state\":\"California\",\"country\":\"USA\",\"zip\":95113,\"active\":true,\"members\":[{\"firstName\":\"John\",\"lastName\":\"Smith\",\"active\":false,\"hours\":18.5,\"age\":21},{\"firstName\":\"Foo\",\"lastName\":\"Bar\",\"active\":true,\"hours\":25,\"age\":21},{\"firstName\":\"Peter\",\"lastName\":\"Jones\",\"active\":false}]}";
+
+    Json json ( jsonSource, strlen ( jsonSource ), 20 );
+
+    if ( !json.isValidJson () )
+    {
+        logError ( "Invalid JSON: %s", jsonSource );
+        return -1;
+    }
+
+    if ( json.type (0) != JSMN_OBJECT )
+    {
+        logError ( "Invalid JSON.  ROOT element is not Object: %s", jsonSource );
+        return -1;
+    }
+
+    // Let's get the value of key "city" in ROOT object, and copy into
+    // cityValue
+    char cityValue [ 32 ];
+
+    logInfo ( "Finding \"city\" Key ... " );
+    // ROOT object should have '0' tokenIndex, and -1 parentIndex
+    int cityKeyIndex = json.findKeyIndexIn ( "city", 0 );
+    if ( cityKeyIndex == -1 )
+    {
+        // Error handling part ...
+        logError ( "\"city\" does not exist ... do something!!" );
+    }
+    else
+    {
+        // Find the first child index of key-node "city"
+        int cityValueIndex = json.findChildIndexOf ( cityKeyIndex, -1 );
+        if ( cityValueIndex > 0 )
+        {
+            const char * valueStart  = json.tokenAddress ( cityValueIndex );
+            int          valueLength = json.tokenLength ( cityValueIndex );
+            strncpy ( cityValue, valueStart, valueLength );
+            cityValue [ valueLength ] = 0; // NULL-terminate the string
+
+            //let's print the value.  It should be "San Jose"
+            logInfo ( "city: %s", cityValue );
+        }
+    }
+
+    // More on this example to come, later.
+    return 0;
+}
+
+#if 0
+#include "mbed.h"
+#include "EthernetInterface.h"
+const int BROADCAST_PORT = 58083;
+
+// https://os.mbed.com/handbook/Socket#broadcasting
+// https://os.mbed.com/users/mbed_official/code/BroadcastReceive/docs/28ba970b3e23/main_8cpp_source.html
+int main_broadcast_receive() {
+    EthernetInterface eth;
+    eth.init(); //Use DHCP
+    eth.connect();
+
+    UDPSocket socket;
+    socket.bind(BROADCAST_PORT);
+    socket.set_broadcasting();
+
+    Endpoint broadcaster;
+    char buffer[256];
+    while (true) {
+        printf("\nWait for packet...\n");
+        int n = socket.receiveFrom(broadcaster, buffer, sizeof(buffer));
+        buffer[n] = '\0';
+        printf("Packet from \"%s\": %s\n", broadcaster.get_address(), buffer);
+    }
+}
+#endif
 
 int main_download_and_save_file() {
     pc.baud(115200);
@@ -480,7 +568,8 @@ int main_http() {
     {
         // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
         // To receive chunked response, pass in a callback as last parameter to the constructor.
-        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://192.168.1.162:8080", on_body_cb);
+        // HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://esp8266-8109ea.local", on_body_cb);
+        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://192.168.1.177", on_body_cb);
 
         HttpResponse* get_res = get_req->send();
         if (!get_res) {
