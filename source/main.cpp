@@ -72,9 +72,9 @@ int main_test_node_devices() {
         }
 
         if (peachDeviceManager->NodeRelayStatus(DEV_1_IP) == false) {
-            peachDeviceManager->NodeRelayOn(DEV_1_IP);
+            peachDeviceManager->NodeRelayOn(DEV_1_IP "/control");
         } else {
-            peachDeviceManager->NodeRelayOff(DEV_1_IP);
+            peachDeviceManager->NodeRelayOff(DEV_1_IP "/control");
         }
     }
     return 0;

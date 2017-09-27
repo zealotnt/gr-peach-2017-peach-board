@@ -222,6 +222,27 @@ int NodeManager::NodeRelayOn(std::string ip)
     if (nodeId == -1) {
         return -1;
     }
+
+    {
+        // Do a POST request to node device EP
+        HttpRequest* post_req = new HttpRequest(network, HTTP_POST, ip.c_str());
+        post_req->set_header("Content-Type", "application/x-www-form-urlencoded");
+
+        const char body[] = "&relay=on&";
+
+        HttpResponse* post_res = post_req->send(body, strlen(body));
+        if (!post_res) {
+            printf("HttpRequest failed (error code %d)\n", post_req->get_error());
+            return 1;
+        }
+
+        printf("\n----- HTTP POST response -----\n");
+        dump_response(post_res);
+        printf("\n----- END HTTP POST response -----\n");
+
+        delete post_req;
+    }
+
     this->node_list[nodeId]->RelayStatusSet(true);
 }
 
@@ -231,6 +252,27 @@ int NodeManager::NodeRelayOff(std::string ip)
     if (nodeId == -1) {
         return -1;
     }
+
+    {
+        // Do a POST request to node device EP
+        HttpRequest* post_req = new HttpRequest(network, HTTP_POST, ip.c_str());
+        post_req->set_header("Content-Type", "application/x-www-form-urlencoded");
+
+        const char body[] = "&relay=off&";
+
+        HttpResponse* post_res = post_req->send(body, strlen(body));
+        if (!post_res) {
+            printf("HttpRequest failed (error code %d)\n", post_req->get_error());
+            return 1;
+        }
+
+        printf("\n----- HTTP POST response -----\n");
+        dump_response(post_res);
+        printf("\n----- END HTTP POST response -----\n");
+
+        delete post_req;
+    }
+
     this->node_list[nodeId]->RelayStatusSet(false);
 }
 
