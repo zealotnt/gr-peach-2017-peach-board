@@ -29,15 +29,9 @@
 #include "usb_host_setting.h"
 #include "dec_wav.h"
 #include "grUtility.h"
+#include "grHwSetup.h"
 
-#define USB_HOST_CH     1
 #define DUMP_HTTP_BODY 1
-
-#define AUDIO_WRITE_BUFF_SIZE  (4096)
-#define AUDIO_WRITE_BUFF_NUM   (9)
-#define FILE_NAME_LEN          (64)
-#define TEXT_SIZE              (64 + 1) //null-terminated
-#define FLD_PATH               "/usb/"
 
 static uint8_t audio_write_buff[AUDIO_WRITE_BUFF_NUM][AUDIO_WRITE_BUFF_SIZE]
                 __attribute((section("NC_BSS"),aligned(4)));
@@ -46,13 +40,9 @@ static uint8_t title_buf[TEXT_SIZE];
 static uint8_t artist_buf[TEXT_SIZE];
 static uint8_t album_buf[TEXT_SIZE];
 
-TLV320_RBSP audio(P10_13, I2C_SDA, I2C_SCL, P4_4, P4_5, P4_7, P4_6,
-                  0x80, (AUDIO_WRITE_BUFF_NUM - 1), 0);
-DigitalIn  button(USER_BUTTON0);
-DigitalOut usb1en(P3_8);
 mbedtls_sha1_context httpBodyHashCtx;
 unsigned char hashOutput[20];
-Serial pc(USBTX, USBRX, 115200);
+
 
 int playWavFile(char *fileName);
 
@@ -60,16 +50,6 @@ static void callback_audio_write_end(void * p_data, int32_t result, void * p_app
     if (result < 0) {
         printf("audio write callback error %d\n", result);
     }
-}
-
-void dump_response(HttpResponse* res) {
-    printf("Status: %d - %s\n", res->get_status_code(), res->get_status_message().c_str());
-
-    printf("Headers:\n");
-    for (size_t ix = 0; ix < res->get_headers_length(); ix++) {
-        printf("\t%s: %s\n", res->get_headers_fields()[ix]->c_str(), res->get_headers_values()[ix]->c_str());
-    }
-    printf("\nBody (%d bytes):\n\n%s\n", res->get_body_length(), res->get_body_as_string().c_str());
 }
 
 static void on_body_cb(const char *at, size_t length)
@@ -106,10 +86,10 @@ int main() {
     // return main_http();
     // return main_save_file();
     // return main_wav_player();
-    // return main_download_and_save_file();
+    return main_download_and_save_file();
     // return main_wav_player_func();
     // return main_broadcast_receive();
-    return main_test_json();
+    // return main_test_json();
     // return main_test_node_devices();
 }
 
@@ -137,7 +117,7 @@ int main_test_node_devices() {
     printf("Node %s: relay_status = %s\r\n", DEV_1_NAME, (status == true) ? "on" : "off");
 
     while(1) {
-        while (button.read() == 1) {
+        while (isButtonRelease()) {
             Thread::wait(100);
         }
 
@@ -178,30 +158,11 @@ int main_broadcast_receive() {
 #endif
 
 int main_download_and_save_file() {
-    pc.baud(115200);
-    printf("Get Wav file\r\n");
-    DIR  * d = NULL;
     char file_path[sizeof(FLD_PATH) + FILE_NAME_LEN];
-    FATFileSystem fs("usb");
-    USBHostMSD msd;
 
-    //Audio Shield USB1 enable
-    usb1en = 1;        //Outputs high level
-    Thread::wait(5);
-    usb1en = 0;        //Outputs low level
-
-    audio.power(0x02); // mic off
-    audio.inputVolume(0.7, 0.7);
-
-    // try to connect a MSD device
-    printf("Waiting for usb\r\n");
-    while(!msd.connect()) {
-        Thread::wait(500);
-    }
-
-    printf("USB connected \r\n");
-    // Now that the MSD device is connected, file system is mounted.
-    fs.mount(&msd);
+    grEnableUSB1();
+    grEnableAudio();
+    grSetupUsb();
 
     // Connect to the network (see mbed_app.json for the connectivity method used)
     NetworkInterface* network = easy_connect(true);
@@ -212,7 +173,7 @@ int main_download_and_save_file() {
 
     while (1) {
         printf("Wait for button\r\n");
-        while (button.read() == 1) {
+        while (isButtonRelease()) {
             Thread::wait(100);
         }
         printf("Button press\r\n");
@@ -250,33 +211,20 @@ int main_download_and_save_file() {
         playWavFile("file_to_write.txt");
     }
 
-    fs.unmount();
     Thread::wait(osWaitForever);
 }
 
 int main_save_file() {
-    pc.baud(115200);
     printf("Get Wav file\r\n");
     FILE * fp = NULL;
     DIR  * d = NULL;
     char file_path[sizeof(FLD_PATH) + FILE_NAME_LEN];
-    FATFileSystem fs("usb");
-    USBHostMSD msd;
 
     //Audio Shield USB1 enable
-    usb1en = 1;        //Outputs high level
-    Thread::wait(5);
-    usb1en = 0;        //Outputs low level
+    grEnableUSB1();
 
     // try to connect a MSD device
-    printf("Waiting for usb\r\n");
-    while(!msd.connect()) {
-        Thread::wait(500);
-    }
-
-    printf("USB connected \r\n");
-    // Now that the MSD device is connected, file system is mounted.
-    fs.mount(&msd);
+    grSetupUsb();
 
     strcpy(file_path, FLD_PATH);
     strcat(file_path, "file_to_write.txt");
@@ -289,13 +237,13 @@ int main_save_file() {
     int written = fwrite(data_to_write, strlen(data_to_write), 1, fp);
     printf("Write %d bytes to file\r\n", written*strlen(data_to_write));
     fclose(fp);
-
+    grUnmoutUsb();
     printf("Write done, loop forerver\r\n");
-    fs.unmount();
     Thread::wait(osWaitForever);
 }
 
 int playWavFile(char *fileName) {
+    TLV320_RBSP *audio = grAudio();
     FILE * fp = NULL;
     dec_wav wav_file;
     int buff_index = 0;
@@ -317,8 +265,8 @@ int playWavFile(char *fileName) {
         fclose(fp);
         fp = NULL;
     } else if ((wav_file.GetChannel() != 2)
-            || (audio.format(wav_file.GetBlockSize()) == false)
-            || (audio.frequency(wav_file.GetSamplingRate()) == false)) {
+            || (audio->format(wav_file.GetBlockSize()) == false)
+            || (audio->frequency(wav_file.GetSamplingRate()) == false)) {
         printf("Error File  :%s\n", fileName);
         printf("Audio Info  :%dch, %dbit, %dHz\n", wav_file.GetChannel(),
                 wav_file.GetBlockSize(), wav_file.GetSamplingRate());
@@ -341,7 +289,7 @@ int playWavFile(char *fileName) {
 
         audio_data_size = wav_file.GetNextData(p_buf, AUDIO_WRITE_BUFF_SIZE);
         if (audio_data_size > 0) {
-            audio.write(p_buf, audio_data_size, &audio_write_async_ctl);
+            audio->write(p_buf, audio_data_size, &audio_write_async_ctl);
             buff_index++;
             if (buff_index >= AUDIO_WRITE_BUFF_NUM) {
                 buff_index = 0;
@@ -349,7 +297,7 @@ int playWavFile(char *fileName) {
         }
 
         // file close
-        if ((audio_data_size < AUDIO_WRITE_BUFF_SIZE) || (button == 0)) {
+        if ((audio_data_size < AUDIO_WRITE_BUFF_SIZE)) {
             fclose(fp);
             fp = NULL;
             Thread::wait(500);
@@ -360,19 +308,13 @@ int playWavFile(char *fileName) {
 }
 
 int main_wav_player_func() {
-    pc.baud(115200);
     printf("main_wav_player_func\r\n");
 
     FATFileSystem fs("usb");
     USBHostMSD msd;
 
-    //Audio Shield USB1 enable
-    usb1en = 1;        //Outputs high level
-    Thread::wait(5);
-    usb1en = 0;        //Outputs low level
-
-    audio.power(0x02); // mic off
-    audio.inputVolume(0.7, 0.7);
+    grEnableUSB1();
+    grEnableAudio();
 
     // try to connect a MSD device
     printf("Waiting for usb\r\n");
@@ -388,7 +330,6 @@ int main_wav_player_func() {
 }
 
 int main_wav_player() {
-    pc.baud(115200);
     printf("main_wav_player\r\n");
     rbsp_data_conf_t audio_write_async_ctl = {&callback_audio_write_end, NULL};
     FILE * fp = NULL;
@@ -397,36 +338,17 @@ int main_wav_player() {
     int buff_index = 0;
     size_t audio_data_size;
     dec_wav wav_file;
+    TLV320_RBSP *audio = grAudio();
 
-    FATFileSystem fs("usb");
-    USBHostMSD msd;
-
-    //Audio Shield USB1 enable
-    usb1en = 1;        //Outputs high level
-    Thread::wait(5);
-    usb1en = 0;        //Outputs low level
-
-    audio.power(0x02); // mic off
-    audio.inputVolume(0.7, 0.7);
+    grEnableUSB1();
+    grEnableAudio();
+    grSetupUsb();
 
     while(1) {
-        // try to connect a MSD device
-        printf("Waiting for usb\r\n");
-        while(!msd.connect()) {
-            Thread::wait(500);
-        }
-
-        printf("USB connected \r\n");
-        // Now that the MSD device is connected, file system is mounted.
-        fs.mount(&msd);
 
         // in a loop, append a file
         // if the device is disconnected, we try to connect it again
         while(1) {
-            // if device disconnected, try to connect again
-            if (!msd.connected()) {
-                break;
-            }
             if (fp == NULL) {
                 // file search
                 if (d == NULL) {
@@ -446,8 +368,8 @@ int main_wav_player() {
                             fclose(fp);
                             fp = NULL;
                         } else if ((wav_file.GetChannel() != 2)
-                                || (audio.format(wav_file.GetBlockSize()) == false)
-                                || (audio.frequency(wav_file.GetSamplingRate()) == false)) {
+                                || (audio->format(wav_file.GetBlockSize()) == false)
+                                || (audio->frequency(wav_file.GetSamplingRate()) == false)) {
                             printf("Error File  :%s\n", p->d_name);
                             printf("Audio Info  :%dch, %dbit, %dHz\n", wav_file.GetChannel(),
                                     wav_file.GetBlockSize(), wav_file.GetSamplingRate());
@@ -476,7 +398,7 @@ int main_wav_player() {
 
                 audio_data_size = wav_file.GetNextData(p_buf, AUDIO_WRITE_BUFF_SIZE);
                 if (audio_data_size > 0) {
-                    audio.write(p_buf, audio_data_size, &audio_write_async_ctl);
+                    audio->write(p_buf, audio_data_size, &audio_write_async_ctl);
                     buff_index++;
                     if (buff_index >= AUDIO_WRITE_BUFF_NUM) {
                         buff_index = 0;
@@ -484,7 +406,7 @@ int main_wav_player() {
                 }
 
                 // file close
-                if ((audio_data_size < AUDIO_WRITE_BUFF_SIZE) || (button == 0)) {
+                if (audio_data_size < AUDIO_WRITE_BUFF_SIZE) {
                     fclose(fp);
                     fp = NULL;
                     Thread::wait(500);
@@ -508,7 +430,6 @@ int main_http() {
     mbedtls_sha1_init(&httpBodyHashCtx);
     mbedtls_sha1_starts(&httpBodyHashCtx);
 
-    pc.baud(115200);
     // Connect to the network (see mbed_app.json for the connectivity method used)
     NetworkInterface* network = easy_connect(true);
     if (!network) {

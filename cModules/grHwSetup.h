@@ -18,17 +18,16 @@
 ** - Development
 ==============================================================================*/
 
-#ifndef GR_UTILITY_H_
-#define GR_UTILITY_H_
+#ifndef GR_HW_SETUP_H_
+#define GR_HW_SETUP_H_
 
 /*****************************************************************************/
 /* INCLUSIONS                                                                */
 /*****************************************************************************/
-#include <stdlib.h>
-#include <stdint.h>
-#include <string>
-#include "mbed.h"
-#include "http_response.h"
+#include "TLV320_RBSP.h"
+#include "FATFileSystem.h"
+#include "USBHostMSD.h"
+#include "usb_host_setting.h"
 
 /*****************************************************************************/
 /* DEFINITION OF COMPILE SWITCH                                              */
@@ -38,7 +37,12 @@
 /*****************************************************************************/
 /* DEFINITION OF CONSTANTS                                                   */
 /*****************************************************************************/
-
+#define AUDIO_WRITE_BUFF_SIZE  (4096)
+#define AUDIO_WRITE_BUFF_NUM   (9)
+#define FILE_NAME_LEN          (64)
+#define TEXT_SIZE              (64 + 1) //null-terminated
+#define FLD_PATH               "/usb/"
+#define USB_HOST_CH     		1
 
 /*****************************************************************************/
 /* DEFINITION OF TYPES                                                       */
@@ -54,12 +58,15 @@
 /* DECLARATION OF VARIABLES (Only external global variables)                 */
 /*****************************************************************************/
 
-
 /*****************************************************************************/
 /* DECLARATION OF GLOBALES FUNCTIONS (APIs, Callbacks & MainFunctions)       */
 /*****************************************************************************/
-void DumpHex(const void* data, size_t size);
-void dump_response(HttpResponse* res);
+bool isButtonPressed();
+bool isButtonRelease();
+void grEnableUSB1();
+void grEnableAudio();
+void grSetupUsb();
+void grUnmoutUsb();
+TLV320_RBSP *grAudio();
 
-
-#endif /* GR_UTILITY_H_ */
+#endif /* GR_HW_SETUP_H_ */
