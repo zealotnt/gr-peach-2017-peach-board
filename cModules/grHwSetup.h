@@ -57,16 +57,25 @@
 /*****************************************************************************/
 /* DECLARATION OF VARIABLES (Only external global variables)                 */
 /*****************************************************************************/
+extern uint8_t title_buf[TEXT_SIZE];
+extern uint8_t artist_buf[TEXT_SIZE];
+extern uint8_t album_buf[TEXT_SIZE];
+extern uint8_t audio_write_buff[AUDIO_WRITE_BUFF_NUM][AUDIO_WRITE_BUFF_SIZE]
+                __attribute((section("NC_BSS"),aligned(4)));
 
 /*****************************************************************************/
 /* DECLARATION OF GLOBALES FUNCTIONS (APIs, Callbacks & MainFunctions)       */
 /*****************************************************************************/
 bool isButtonPressed();
 bool isButtonRelease();
+
+NetworkInterface *grInitEth();
 void grEnableUSB1();
 void grEnableAudio();
 void grSetupUsb();
 void grUnmoutUsb();
 TLV320_RBSP *grAudio();
+int grPlayWavFile(char *fileName);
+int grDownloadFile(NetworkInterface* network, char *fileName, char *address);
 
 #endif /* GR_HW_SETUP_H_ */

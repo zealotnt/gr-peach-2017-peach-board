@@ -14,7 +14,7 @@
 **
 **= History ====================================================================
 ** @date
-** @author	zealot
+** @author  zealot
 ** - Development
 ==============================================================================*/
 
@@ -63,13 +63,13 @@
 /******************************************************************************/
 NodeManager::NodeManager(NetworkInterface *network)
 {
-	this->network = network;
-	this->node_count = 0;
+    this->network = network;
+    this->node_count = 0;
 }
 
 uint32_t NodeManager::NodeCount()
 {
-	return this->node_count;
+    return this->node_count;
 }
 
 int NodeManager::NodeAdd(std::string id, std::string name)
@@ -84,11 +84,11 @@ int NodeManager::NodeStatusUpdate(std::string id, bool *status)
 
 int NodeManager::NodeRelayControl(std::string ip, bool status)
 {
-	if (status) {
-		this->NodeRelayOn(ip);
-	} else {
-		this->NodeRelayOff(ip);
-	}
+    if (status) {
+        this->NodeRelayOn(ip);
+    } else {
+        this->NodeRelayOff(ip);
+    }
 }
 
 int NodeManager::NodeRelayOn(std::string ip)
