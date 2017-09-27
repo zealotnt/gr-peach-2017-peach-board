@@ -49,7 +49,7 @@ int main() {
 
 #include "cNodeManager.h"
 
-#define DEV_1_IP            "192.168.1.177"
+#define DEV_1_IP            "http://192.168.1.177"
 #define DEV_1_NAME          "lamp-1"
 
 int main_test_node_devices() {

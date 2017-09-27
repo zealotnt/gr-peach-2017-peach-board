@@ -37,7 +37,7 @@
 /*****************************************************************************/
 /* DEFINITION OF CONSTANTS                                                   */
 /*****************************************************************************/
-
+#define MAX_NODE_DEVICE				2
 
 /*****************************************************************************/
 /* DEFINITION OF TYPES                                                       */
@@ -59,8 +59,8 @@
 /*****************************************************************************/
 class NodeDevice {
 public:
-	NodeDevice(std::string ip, std::string name, uint32_t id);
-	uint32_t Id();
+	NodeDevice(std::string ip, std::string name, int id);
+	int Id();
 	std::string Name();
 	std::string Ip();
 	bool RelayStatusGet();
@@ -69,7 +69,7 @@ public:
 private:
 	std::string ip;
 	std::string name;
-	uint32_t id;
+	int id;
 	bool relayStatus;
 };
 
@@ -83,10 +83,11 @@ public:
 	int NodeRelayOn(std::string ip);
 	int NodeRelayOff(std::string ip);
 	bool NodeRelayStatus(std::string ip);
+	int getNodeId(std::string ip);
 
 private:
 	uint32_t node_count;
-	NodeDevice *node_list;
+	NodeDevice *node_list[MAX_NODE_DEVICE];
 	NetworkInterface *network;
 };
 
