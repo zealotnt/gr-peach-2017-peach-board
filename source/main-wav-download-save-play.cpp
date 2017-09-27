@@ -40,9 +40,11 @@ int main_wav_player_func() {
     grSetupUsb();
 
     grPlayWavFile("NoiNayCoAnh.wav");
+    // grPlayWavFile("good_8khz.wav");
 }
 
 int main_download_save_play() {
+    Timer countTimer;
     NetworkInterface* network = grInitEth();
     grEnableUSB1();
     grEnableAudio();
@@ -53,10 +55,13 @@ int main_download_save_play() {
         while (isButtonRelease()) {
             Thread::wait(100);
         }
-        printf("Button press\r\n");
 
+        printf("Button press\r\n");
+        countTimer.start();
         grDownloadFile(network, "file_to_write.txt", "http://192.168.1.162:8080");
-        printf("Download done, play file\r\n");
+        countTimer.stop();
+        printf("Download done in %d ms, play file\r\n", countTimer.read_ms());
+        countTimer.reset();
         grPlayWavFile("file_to_write.txt");
     }
 
