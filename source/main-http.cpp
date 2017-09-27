@@ -130,6 +130,7 @@ int main_download_and_save_file();
 int main_wav_player_func();
 int main_broadcast_receive();
 int main_test_json();
+int main_test_node_devices();
 
 int main() {
     // return main_http();
@@ -138,13 +139,51 @@ int main() {
     // return main_download_and_save_file();
     // return main_wav_player_func();
     // return main_broadcast_receive();
-    return main_test_json();
+    // return main_test_json();
+    return main_test_node_devices();
+}
+
+#include "cNodeManager.h"
+
+#define DEV_1_IP            "192.168.1.177"
+#define DEV_1_NAME          "lamp-1"
+
+int main_test_node_devices() {
+    NetworkInterface* network = easy_connect(true);
+    if (!network) {
+        printf("Cannot connect to the network, see serial output");
+        return 1;
+    }
+
+    NodeManager *peachDeviceManager = new NodeManager(network);
+    peachDeviceManager->NodeAdd(DEV_1_IP, DEV_1_NAME);
+
+    bool status;
+    if (peachDeviceManager->NodeStatusUpdate(DEV_1_IP, &status) != 0) {
+        printf("Can't update node relay status\r\n");
+        return -1;
+    }
+
+    printf("Node %s: relay_status = %s\r\n", DEV_1_NAME, (status == true) ? "on" : "off");
+
+    while(1) {
+        while (button.read() == 1) {
+            Thread::wait(100);
+        }
+
+        if (peachDeviceManager->NodeRelayStatus(DEV_1_IP) == false) {
+            peachDeviceManager->NodeRelayOn(DEV_1_IP);
+        } else {
+            peachDeviceManager->NodeRelayOff(DEV_1_IP);
+        }
+    }
+    return 0;
 }
 
 #include "Json.h"
 
-#define logError(...)       printf(__VAR_ARGS__); printf("\r\n");
-#define logInfo(...)        printf(__VAR_ARGS__); printf("\r\n");
+#define logError(...)       printf(__VA_ARGS__); printf("\r\n");
+#define logInfo(...)        printf(__VA_ARGS__); printf("\r\n");
 
 int main_test_json() {
     // Note that the JSON object is 'escaped'.  One doesn't get escaped JSON
