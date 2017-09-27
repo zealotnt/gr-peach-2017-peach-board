@@ -191,6 +191,10 @@ public:
         return response;
     }
 
+    HttpResponse* getLastResponse() {
+        return response;
+    }
+
     /**
      * Set a header for the request.
      *
