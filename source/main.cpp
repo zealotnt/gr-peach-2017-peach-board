@@ -46,36 +46,3 @@ int main() {
     // return main_test_json();
     return main_test_node_devices();
 }
-
-#include "cNodeManager.h"
-
-#define DEV_1_IP            "http://192.168.1.177"
-#define DEV_1_NAME          "lamp-1"
-
-int main_test_node_devices() {
-    NetworkInterface* network = grInitEth();
-
-    NodeManager *peachDeviceManager = new NodeManager(network);
-    peachDeviceManager->NodeAdd(DEV_1_IP, DEV_1_NAME);
-
-    bool status;
-    if (peachDeviceManager->NodeStatusUpdate(DEV_1_IP, &status) != 0) {
-        printf("Can't update node relay status\r\n");
-        return -1;
-    }
-
-    printf("Node %s: relay_status = %s\r\n", DEV_1_NAME, (status == true) ? "on" : "off");
-
-    while(1) {
-        while (isButtonRelease()) {
-            Thread::wait(100);
-        }
-
-        if (peachDeviceManager->NodeRelayStatus(DEV_1_IP) == false) {
-            peachDeviceManager->NodeRelayOn(DEV_1_IP "/control");
-        } else {
-            peachDeviceManager->NodeRelayOff(DEV_1_IP "/control");
-        }
-    }
-    return 0;
-}
