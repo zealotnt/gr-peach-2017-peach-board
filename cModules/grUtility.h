@@ -61,5 +61,6 @@
 void DumpHex(const void* data, size_t size);
 void dump_response(HttpResponse* res);
 int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen);
+int grReadFile(char *filePath, uint8_t **fileVal, uint32_t *fileLen);
 
 #endif /* GR_UTILITY_H_ */

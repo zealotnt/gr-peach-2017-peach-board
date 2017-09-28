@@ -26,10 +26,11 @@
 #include "grHwSetup.h"
 
 int main_upload_file() {
-    uint8_t buffToSend[5000];
+    #define BUFF_SIZE       500000
+    uint8_t *buffToSend = (uint8_t *)malloc(BUFF_SIZE);
     NetworkInterface* network = grInitEth();
 
-    for (int i = 0; i < sizeof(buffToSend); i++) {
+    for (int i = 0; i < BUFF_SIZE; i++) {
         buffToSend[i] = i;
     }
 
@@ -39,6 +40,31 @@ int main_upload_file() {
             Thread::wait(100);
         }
 
-        grUploadFile(network, buffToSend, sizeof(buffToSend));
+        grUploadFile(network, buffToSend, BUFF_SIZE);
+    }
+}
+
+int main_upload_file_from_usb() {
+    uint8_t *fileBuff;
+    uint32_t fileLen;
+    char file_path[sizeof(FLD_PATH) + FILE_NAME_LEN];
+
+    NetworkInterface* network = grInitEth();
+    grEnableUSB1();
+    grEnableAudio();
+    grSetupUsb();
+
+    strcpy(file_path, FLD_PATH);
+    strcat(file_path, "good.wav");
+
+    grReadFile(file_path, &fileBuff, &fileLen);
+
+    while (1) {
+        printf("Wait for button\r\n");
+        while (isButtonRelease()) {
+            Thread::wait(100);
+        }
+
+        grUploadFile(network, fileBuff, fileLen);
     }
 }

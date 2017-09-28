@@ -136,7 +136,7 @@ int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen)
     {
         char body[4096];
         int firstPartLen;
-        sprintf(body,"%s%d%s",
+        sprintf(body,"%s%04d%s",
             "--123456789\r\n"
             "Content-Disposition: form-data; name=\"files\"; filename=\"f",
             k,
@@ -171,4 +171,38 @@ int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen)
     delete post_req;
 }
 
+int grReadFile(char *filePath, uint8_t **fileVal, uint32_t *fileLen)
+{
+    FILE * fp = NULL;
+    uint32_t fileSize;
+    int ret = -1;
+
+    fp = fopen(filePath, "r");
+    if (fp == NULL) {
+        printf("read file %s failed\r\n", filePath);
+        return -1;
+    }
+
+    /* Get size of file */
+    fseek(fp, 0, SEEK_END);
+    fileSize = ftell(fp);
+    *fileVal = (uint8_t*)malloc(fileSize + 1);
+    if (*fileVal == NULL) {
+        printf("Out of memory\r\n");
+        return -1;
+    }
+    memset(*fileVal, 0x00, fileSize + 1);
+
+    /* Seek to beginning of file */
+    fseek(fp, SEEK_SET, 0);
+
+    /* Read content of file */
+    fread(*fileVal, 1, fileSize, fp);
+
+    if (fileLen != NULL)
+        *fileLen = fileSize;
+    if (fp)
+        fclose(fp);
+    return ret;
+}
 /************************* End of File ****************************************/
