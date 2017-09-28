@@ -53,20 +53,30 @@ int main_upload_file() {
             {
                 //printf("POST FILE %d\n",k);
                 char body1[4096];
-                sprintf(body1,"%s%d%s","--123456789\r\nContent-Disposition: form-data; name=\"text\"\r\n\r\nmy text here\r\n--123456789\r\nContent-Disposition: form-data; name=\"files\"; filename=\"test",
-                    k,".txt\"\r\nContent-Type: text/plain\r\n\r\nHello world!\n");
+                int firstPartLen;
+                sprintf(body1,"%s%d%s",
+                    "--123456789\r\n"
+                    "Content-Disposition: form-data;"
+                    " name=\"text\"\r\n\r\nmy text here\r\n"
+                    "--123456789\r\n"
+                    "Content-Disposition: form-data; name=\"files\"; filename=\"test",
+                    k,
+                    ".txt\"\r\nContent-Type: text/plain\r\n\r\nHello world!\n");
 
-                for (int i = 0; i < 1; i++)
-                {
-                    char tmp[101] = "aaaaaaaaabbbbbbbbbbaaaaaaaaabbbbbbbbbbaaaaaaaaabbbbbbbbbbaaaaaaaaabbbbbbbbbbaaaaaaaaabbbbbbbbbb\n";
-                    char str[1024];
-                    sprintf(str,"%s%s%s%s%s%s",tmp,tmp,tmp,tmp,tmp,tmp,tmp);
-                    strcat(body1,str);
+                firstPartLen = strlen(body1);
+                uint8_t tmp[100];
+                for (int loop = 0; loop < 100; loop++) {
+                    tmp[loop] = loop;
                 }
-                strcat(body1,"\r\n\r\n--123456789");
+                for (int loop = 0; loop < 6; loop++) {
+                    memcpy(body1+firstPartLen, tmp, 100);
+                    firstPartLen += 100;
+                }
 
-                //printf("Test Lenght: %d\n",strlen(body1));
-                post_res = post_req->send(body1, strlen(body1));
+                memcpy(body1+firstPartLen, "\r\n\r\n--123456789", strlen("\r\n\r\n--123456789"));
+                firstPartLen += strlen("\r\n\r\n--123456789");
+
+                post_res = post_req->send(body1, firstPartLen);
                 if (!post_res) {
                     printf("HttpRequest failed (error code %d)\n", post_req->get_error());
                     return 1;
