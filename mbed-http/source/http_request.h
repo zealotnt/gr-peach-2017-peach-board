@@ -191,6 +191,13 @@ public:
         return response;
     }
 
+    void clearLastResponse() {
+        if (response) {
+            delete response;
+            response = NULL;
+        }
+    }
+
     HttpResponse* getLastResponse() {
         return response;
     }

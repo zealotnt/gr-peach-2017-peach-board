@@ -35,6 +35,7 @@ int main_wav_player_func();
 int main_broadcast_receive();
 int main_test_json();
 int main_test_node_devices();
+int main_upload_file();
 
 int main() {
     // return main_http();
@@ -44,5 +45,6 @@ int main() {
     // return main_wav_player_func();
     // return main_broadcast_receive();
     // return main_test_json();
-    return main_test_node_devices();
+    // return main_test_node_devices();
+    return main_upload_file();
 }
