@@ -60,6 +60,6 @@
 /*****************************************************************************/
 void DumpHex(const void* data, size_t size);
 void dump_response(HttpResponse* res);
-
+int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen);
 
 #endif /* GR_UTILITY_H_ */

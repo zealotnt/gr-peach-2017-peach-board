@@ -23,10 +23,19 @@
 /******************************************************************************/
 #include "grUtility.h"
 
+#include "http_request.h"
+#include "http_parser.h"
+#include "http_response.h"
+#include "http_request_builder.h"
+#include "http_response_parser.h"
+#include "http_parsed_url.h"
+#include "http_response_multipart_parser.h"
+#include "multipart_parser.h"
+
 /******************************************************************************/
 /* LOCAL CONSTANT AND COMPILE SWITCH SECTION                                  */
 /******************************************************************************/
-
+#define MAX_POST_PAYLOAD    600
 
 /******************************************************************************/
 /* LOCAL TYPE DEFINITION SECTION                                              */
@@ -101,5 +110,65 @@ void dump_response(HttpResponse* res) {
     printf("\nBody (%d bytes):\n\n%s\n", res->get_body_length(), res->get_body_as_string().c_str());
 }
 
+int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen)
+{
+    int packetIdx = 0;
+    int packetToSend;
+    int lastPacketSize;
+
+    packetToSend = buffLen / MAX_POST_PAYLOAD;
+    packetToSend += ((buffLen % MAX_POST_PAYLOAD) != 0);
+    lastPacketSize = buffLen % MAX_POST_PAYLOAD;
+
+    printf("Start POST to server, need to send %d bytes in %d times\r\n", buffLen, packetToSend);
+
+    HttpRequest* post_req = new HttpRequest(network, HTTP_POST, "http://192.168.1.162:8080/upload");
+
+    post_req->set_header("Content-Type", "multipart/form-data; boundary=123456789");
+    post_req->set_header("Accept-Language", "en-US,en;q=0.5");
+    post_req->set_header("Accept-Encoding", "gzip, deflate");
+    post_req->set_header("Connection","keep-alive");
+
+    HttpResponse* post_res;
+    Timer t;
+    t.start();
+    for(int k = 0; k < packetToSend; k++)
+    {
+        char body[4096];
+        int firstPartLen;
+        sprintf(body,"%s%d%s",
+            "--123456789\r\n"
+            "Content-Disposition: form-data; name=\"files\"; filename=\"f",
+            k,
+            "\"\r\nContent-Type: text/plain\r\n\r\n");
+
+        firstPartLen = strlen(body);
+
+        if (k == (packetToSend - 1)) {
+            // last packet
+            memcpy(body + firstPartLen, buff + packetIdx, lastPacketSize);
+            firstPartLen += lastPacketSize;
+        } else {
+            memcpy(body + firstPartLen, buff + packetIdx, MAX_POST_PAYLOAD);
+            firstPartLen += MAX_POST_PAYLOAD;
+            packetIdx += MAX_POST_PAYLOAD;
+        }
+
+        memcpy(body + firstPartLen, "\r\n--123456789", strlen("\r\n--123456789"));
+        firstPartLen += strlen("\r\n--123456789");
+
+        post_res = post_req->send(body, firstPartLen);
+        if (!post_res) {
+            printf("HttpRequest failed (error code %d)\n", post_req->get_error());
+            return 1;
+        }
+
+        post_req->clearLastResponse();
+    }
+    t.stop();
+    printf("\nDone Upload file takes %f sec\r\n",t.read());
+
+    delete post_req;
+}
 
 /************************* End of File ****************************************/
