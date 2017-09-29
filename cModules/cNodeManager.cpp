@@ -161,6 +161,11 @@ NodeDevice::NodeDevice(std::string ip, std::string name, int id)
 
 }
 
+std::string NodeDevice::Ip()
+{
+    return this->ip;
+}
+
 bool NodeDevice::RelayStatusGet()
 {
     return this->relayStatus;
@@ -255,7 +260,7 @@ int NodeManager::NodeRelayOn(std::string ip)
         return -1;
     }
 
-    HttpRequest *post_req = sendPost(network, ip, "&relay=on&");
+    HttpRequest *post_req = sendPost(network, ip + "/control", "&relay=on&");
     if (post_req == NULL) {
         return -1;
     }
@@ -283,7 +288,7 @@ int NodeManager::NodeRelayOff(std::string ip)
         return -1;
     }
 
-    HttpRequest *post_req = sendPost(network, ip, "&relay=off&");
+    HttpRequest *post_req = sendPost(network, ip + "/control", "&relay=off&");
     if (post_req == NULL) {
         return -1;
     }
@@ -314,7 +319,18 @@ bool NodeManager::NodeRelayStatus(std::string ip)
 
 int NodeManager::getNodeId(std::string ip)
 {
-    return 0;
+    for (int i = 0; i < MAX_NODE_DEVICE; i++) {
+        if (this->node_list[i] == NULL) {
+            continue;
+        }
+
+        if (this->node_list[i]->Ip() == ip) {
+            return i;
+        }
+    }
+
+    logError("%s: invalid ip, can't find device accordingly\r\n", __PRETTY_FUNCTION__);
+    return -1;
 }
 
 /************************* End of File ****************************************/
