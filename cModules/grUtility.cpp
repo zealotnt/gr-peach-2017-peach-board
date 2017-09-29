@@ -28,15 +28,6 @@
 #include "grUtility.h"
 #include "grHwSetup.h"
 
-#include "http_request.h"
-#include "http_parser.h"
-#include "http_response.h"
-#include "http_request_builder.h"
-#include "http_response_parser.h"
-#include "http_parsed_url.h"
-#include "http_response_multipart_parser.h"
-#include "multipart_parser.h"
-
 /******************************************************************************/
 /* LOCAL CONSTANT AND COMPILE SWITCH SECTION                                  */
 /******************************************************************************/
@@ -50,6 +41,8 @@
 /******************************************************************************/
 /* LOCAL MACRO DEFINITION SECTION                                             */
 /******************************************************************************/
+#define logError(...)       printf(__VA_ARGS__); printf("\r\n");
+#define logInfo(...)        printf(__VA_ARGS__); printf("\r\n");
 
 
 /******************************************************************************/
@@ -121,6 +114,26 @@ void waitShortPress() {
     while (isButtonRelease()) {
         Thread::wait(100);
     }
+}
+
+HttpRequest *grHttpPost(NetworkInterface *network, char *address, char *body)
+{
+    // Do a POST request to node device EP
+    HttpRequest* post_req = new HttpRequest(network, HTTP_POST, address);
+    post_req->set_header("Content-Type", "application/x-www-form-urlencoded");
+
+    HttpResponse* post_res = post_req->send(body, strlen(body));
+    if (!post_res) {
+        logError("HttpRequest failed (error code %d)", post_req->get_error());
+        delete post_req;
+        return NULL;
+    }
+
+    logInfo("\n----- HTTP POST response -----");
+    dump_response(post_res);
+    logInfo("\n----- END HTTP POST response -----");
+
+    return post_req;
 }
 
 HttpRequest *grHttpGet(NetworkInterface* network, char *end_point)

@@ -28,6 +28,8 @@
 #include <stdint.h>
 #include <string>
 #include "mbed.h"
+
+#include "http_request.h"
 #include "http_response.h"
 
 /*****************************************************************************/
@@ -61,6 +63,10 @@
 void DumpHex(const void* data, size_t size);
 void dump_response(HttpResponse* res);
 void waitShortPress();
+
+HttpRequest *grHttpPost(NetworkInterface *network, char *address, char *body);
+HttpRequest *grHttpGet(NetworkInterface* network, char *end_point);
+
 int grStartUpload(NetworkInterface* network);
 int grEndUpload(NetworkInterface* network);
 int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen);

@@ -74,26 +74,6 @@
 /******************************************************************************/
 /* GLOBAL FUNCTION DEFINITION SECTION                                         */
 /******************************************************************************/
-HttpRequest *sendPost(NetworkInterface *network, std::string address, char *body)
-{
-    // Do a POST request to node device EP
-    HttpRequest* post_req = new HttpRequest(network, HTTP_POST, address.c_str());
-    post_req->set_header("Content-Type", "application/x-www-form-urlencoded");
-
-    HttpResponse* post_res = post_req->send(body, strlen(body));
-    if (!post_res) {
-        logError("HttpRequest failed (error code %d)", post_req->get_error());
-        delete post_req;
-        return NULL;
-    }
-
-    logInfo("\n----- HTTP POST response -----");
-    dump_response(post_res);
-    logInfo("\n----- END HTTP POST response -----");
-
-    return post_req;
-}
-
 int parseRelayStatus(std::string body, bool *status)
 {
     int ret = -1;
@@ -260,7 +240,7 @@ int NodeManager::NodeRelayOn(std::string ip)
         return -1;
     }
 
-    HttpRequest *post_req = sendPost(network, ip + "/control", "&relay=on&");
+    HttpRequest *post_req = grHttpPost(network, (char *)(ip + "/control").c_str(), "&relay=on&");
     if (post_req == NULL) {
         return -1;
     }
@@ -288,7 +268,7 @@ int NodeManager::NodeRelayOff(std::string ip)
         return -1;
     }
 
-    HttpRequest *post_req = sendPost(network, ip + "/control", "&relay=off&");
+    HttpRequest *post_req = grHttpPost(network, (char *)(ip + "/control").c_str(), "&relay=off&");
     if (post_req == NULL) {
         return -1;
     }
