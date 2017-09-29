@@ -1,0 +1,6 @@
+[submodule "easy-connect"]
+    path = easy-connect
+    url = https://github.com/ARMmbed/easy-connect
+[submodule "mbed-os"]
+    path = mbed-os
+    url = https://github.com/ARMmbed/mbed-os
