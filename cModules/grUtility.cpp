@@ -21,7 +21,12 @@
 /******************************************************************************/
 /* INCLUSIONS                                                                 */
 /******************************************************************************/
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "grUtility.h"
+#include "grHwSetup.h"
 
 #include "http_request.h"
 #include "http_parser.h"
@@ -110,6 +115,59 @@ void dump_response(HttpResponse* res) {
     printf("\nBody (%d bytes):\n\n%s\n", res->get_body_length(), res->get_body_as_string().c_str());
 }
 
+void waitShortPress() {
+    Thread::wait(500);
+    printf("Wait for short press\r\n");
+    while (isButtonRelease()) {
+        Thread::wait(100);
+    }
+}
+
+HttpRequest *grHttpGet(NetworkInterface* network, char *end_point)
+{
+    char str[200];
+
+    sprintf(str, "%s%s", ADDRESS_SERVER, end_point);
+
+    HttpRequest* get_req = new HttpRequest(network, HTTP_GET, str);
+
+    HttpResponse* get_res = get_req->send();
+    if (!get_res) {
+        printf("HttpRequest failed (error code %d)\n", get_req->get_error());
+        delete get_req;
+        free(str);
+        return NULL;
+    }
+    printf("\n----- HTTP GET response -----\n");
+    dump_response(get_res);
+    printf("\n----- END HTTP GET response -----\n");
+
+    return get_req;
+}
+
+int grStartUpload(NetworkInterface* network)
+{
+    HttpRequest *start_req = grHttpGet(network, "/start-upload");
+    if (start_req == NULL) {
+        return -1;
+    }
+    delete start_req;
+
+    return 0;
+}
+
+int grEndUpload(NetworkInterface* network)
+{
+    HttpRequest *end_req = grHttpGet(network, "/end-upload");
+    if (end_req == NULL) {
+        return -1;
+    }
+
+    delete end_req;
+
+    return 0;
+}
+
 int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen)
 {
     int packetIdx = 0;
@@ -122,7 +180,7 @@ int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen)
 
     printf("Start POST to server, need to send %d bytes in %d times\r\n", buffLen, packetToSend);
 
-    HttpRequest* post_req = new HttpRequest(network, HTTP_POST, "http://192.168.1.162:8080/upload");
+    HttpRequest* post_req = new HttpRequest(network, HTTP_POST, ADDRESS_SERVER"/upload");
 
     post_req->set_header("Content-Type", "multipart/form-data; boundary=123456789");
     post_req->set_header("Accept-Language", "en-US,en;q=0.5");

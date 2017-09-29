@@ -60,11 +60,13 @@ int main_upload_file_from_usb() {
     grReadFile(file_path, &fileBuff, &fileLen);
 
     while (1) {
-        printf("Wait for button\r\n");
-        while (isButtonRelease()) {
-            Thread::wait(100);
-        }
+        waitShortPress();
+        grStartUpload(network);
 
+        waitShortPress();
         grUploadFile(network, fileBuff, fileLen);
+
+        waitShortPress();
+        grEndUpload(network);
     }
 }
