@@ -136,6 +136,26 @@ HttpRequest *grHttpPost(NetworkInterface *network, char *address, char *body)
     return post_req;
 }
 
+HttpRequest *grHttpPostJson(NetworkInterface *network, char *address, char *body)
+{
+    // Do a POST request to node device EP
+    HttpRequest* post_req = new HttpRequest(network, HTTP_POST, address);
+    post_req->set_header("Content-Type", "application/json");
+
+    HttpResponse* post_res = post_req->send(body, strlen(body));
+    if (!post_res) {
+        logError("HttpRequest failed (error code %d)", post_req->get_error());
+        delete post_req;
+        return NULL;
+    }
+
+    logInfo("\n----- HTTP POST response -----");
+    dump_response(post_res);
+    logInfo("\n----- END HTTP POST response -----");
+
+    return post_req;
+}
+
 HttpRequest *grHttpGet(NetworkInterface* network, char *end_point)
 {
     char str[200];

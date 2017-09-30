@@ -47,34 +47,47 @@ int main_test_node_devices() {
     peachDeviceManager->NodeAdd(DEV_1_IP, DEV_1_NAME);
     peachDeviceManager->NodeAdd(DEV_2_IP, DEV_2_NAME);
 
-    bool status;
-    if (peachDeviceManager->NodeStatusUpdate(DEV_1_IP, &status) != 0) {
+    bool status1;
+    bool status2;
+
+    if (peachDeviceManager->NodeStatusUpdate(DEV_1_IP, &status1) != 0) {
         printf("Can't update node relay status\r\n");
         return -1;
     }
 
-    if (peachDeviceManager->NodeStatusUpdate(DEV_2_IP, &status) != 0) {
+    if (peachDeviceManager->NodeStatusUpdate(DEV_2_IP, &status2) != 0) {
         printf("Can't update node relay status\r\n");
         return -1;
     }
-    printf("Node %s: relay_status = %s\r\n", DEV_1_NAME, (status == true) ? "on" : "off");
 
     while(1) {
-        while (isButtonRelease()) {
-            Thread::wait(100);
+        waitShortPress();
+
+        if (peachDeviceManager->NodeStatusUpdate(DEV_1_IP, &status1) != 0) {
+            printf("Can't update node relay status\r\n");
+            return -1;
         }
 
-        if (peachDeviceManager->NodeRelayStatus(DEV_1_IP) == false) {
-            peachDeviceManager->NodeRelayOn(DEV_1_IP);
-        } else {
-            peachDeviceManager->NodeRelayOff(DEV_1_IP);
+        if (peachDeviceManager->NodeStatusUpdate(DEV_2_IP, &status2) != 0) {
+            printf("Can't update node relay status\r\n");
+            return -1;
         }
+        printf("Node %s: relay_status = %s\r\n", DEV_1_NAME, (status1 == true) ? "on" : "off");
+        printf("Node %s: relay_status = %s\r\n", DEV_2_NAME, (status2 == true) ? "on" : "off");
 
-        if (peachDeviceManager->NodeRelayStatus(DEV_2_IP) == false) {
-            peachDeviceManager->NodeRelayOn(DEV_2_IP);
-        } else {
-            peachDeviceManager->NodeRelayOff(DEV_2_IP);
-        }
+        peachDeviceManager->PostNodeStatus(ADDRESS_SERVER);
+
+        // if (peachDeviceManager->NodeRelayStatus(DEV_1_IP) == false) {
+        //     peachDeviceManager->NodeRelayOn(DEV_1_IP);
+        // } else {
+        //     peachDeviceManager->NodeRelayOff(DEV_1_IP);
+        // }
+
+        // if (peachDeviceManager->NodeRelayStatus(DEV_2_IP) == false) {
+        //     peachDeviceManager->NodeRelayOn(DEV_2_IP);
+        // } else {
+        //     peachDeviceManager->NodeRelayOff(DEV_2_IP);
+        // }
     }
     return 0;
 }

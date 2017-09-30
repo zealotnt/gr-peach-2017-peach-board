@@ -33,7 +33,7 @@
 #include "grUtility.h"
 #include "grHwSetup.h"
 
-#define DUMP_HTTP_BODY 1
+#define DUMP_HTTP_BODY 0
 
 mbedtls_sha1_context httpBodyHashCtx;
 unsigned char hashOutput[20];
@@ -57,28 +57,53 @@ int main_http() {
 
     NetworkInterface* network = grInitEth();
 
-    // Do a GET request to httpbin.org
-    {
-        // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
-        // To receive chunked response, pass in a callback as last parameter to the constructor.
-        // HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://esp8266-8109ea.local", on_body_cb);
-        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, ADDRESS_SERVER, on_body_cb);
+    while (true) {
+        #if 0
+        waitShortPress();
+        // Do a GET request to httpbin.org
+        {
+            // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
+            // To receive chunked response, pass in a callback as last parameter to the constructor.
+            // HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://esp8266-8109ea.local", on_body_cb);
+            HttpRequest* get_req = new HttpRequest(network, HTTP_GET, ADDRESS_SERVER, on_body_cb);
 
-        HttpResponse* get_res = get_req->send();
-        if (!get_res) {
-            printf("HttpRequest failed (error code %d)\n", get_req->get_error());
-            return 1;
+            HttpResponse* get_res = get_req->send();
+            if (!get_res) {
+                printf("HttpRequest failed (error code %d)\n", get_req->get_error());
+                return 1;
+            }
+
+            printf("\n----- HTTP GET response -----\n");
+            dump_response(get_res);
+            printf("\n----- END HTTP GET response -----\n");
+
+            delete get_req;
         }
 
-        printf("\n----- HTTP GET response -----\n");
-        dump_response(get_res);
+        mbedtls_sha1_finish(&httpBodyHashCtx, hashOutput);
+        printf("Sha1: \r\n");
+        DumpHex(hashOutput, sizeof(hashOutput));
+        #endif
 
-        delete get_req;
+        waitShortPress();
+        {
+            HttpRequest* post_req = new HttpRequest(network, HTTP_POST, ADDRESS_SERVER "/status/update");
+            post_req->set_header("Content-Type", "application/json");
+
+            const char body[] = "{\"hello\":\"world\"}";
+
+            HttpResponse* post_res = post_req->send(body, strlen(body));
+            if (!post_res) {
+                printf("HttpRequest failed (error code %d)\n", post_req->get_error());
+                return 1;
+            }
+
+            printf("\n----- HTTP POST response -----\n");
+            dump_response(post_res);
+
+            delete post_req;
+        }
     }
-
-    mbedtls_sha1_finish(&httpBodyHashCtx, hashOutput);
-    printf("Sha1: \r\n");
-    DumpHex(hashOutput, sizeof(hashOutput));
 
     Thread::wait(osWaitForever);
 }

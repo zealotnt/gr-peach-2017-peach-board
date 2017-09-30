@@ -141,6 +141,11 @@ NodeDevice::NodeDevice(std::string ip, std::string name, int id)
 
 }
 
+std::string NodeDevice::Name()
+{
+    return this->name;
+}
+
 std::string NodeDevice::Ip()
 {
     return this->ip;
@@ -149,6 +154,11 @@ std::string NodeDevice::Ip()
 bool NodeDevice::RelayStatusGet()
 {
     return this->relayStatus;
+}
+
+char *NodeDevice::RelayStatusGetChar()
+{
+    return (this->RelayStatusGet() == true) ? (char *)"on" : (char *)"off";
 }
 
 void NodeDevice::RelayStatusSet(bool status)
@@ -311,6 +321,33 @@ int NodeManager::getNodeId(std::string ip)
 
     logError("%s: invalid ip, can't find device accordingly\r\n", __PRETTY_FUNCTION__);
     return -1;
+}
+
+int NodeManager::PostNodeStatus(std::string server_add)
+{
+    std::string body;
+    body += "{\"devices\":[";
+    for (int i = 0; i < MAX_NODE_DEVICE; i++) {
+        if (this->node_list[i] == NULL) {
+            continue;
+        }
+        body += "{\"name\":\"" + this->node_list[i]->Name() + "\",";
+        body += "\"status\":\"";
+        body += (char *)this->node_list[i]->RelayStatusGetChar();
+        body += "\"}";
+        if (i != (MAX_NODE_DEVICE - 1)) {
+            body += ",";
+        }
+    }
+    body += "]}";
+
+    HttpRequest *post_req = grHttpPostJson(network, (char *)(server_add + "/status/update").c_str(), (char *)body.c_str());
+    if (post_req == NULL) {
+        return -1;
+    }
+    delete post_req;
+
+    return 0;
 }
 
 /************************* End of File ****************************************/

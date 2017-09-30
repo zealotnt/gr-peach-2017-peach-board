@@ -65,6 +65,7 @@ void dump_response(HttpResponse* res);
 void waitShortPress();
 
 HttpRequest *grHttpPost(NetworkInterface *network, char *address, char *body);
+HttpRequest *grHttpPostJson(NetworkInterface *network, char *address, char *body);
 HttpRequest *grHttpGet(NetworkInterface* network, char *end_point);
 
 int grStartUpload(NetworkInterface* network);

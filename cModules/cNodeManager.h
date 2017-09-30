@@ -64,6 +64,7 @@ public:
 	std::string Name();
 	std::string Ip();
 	bool RelayStatusGet();
+    char *RelayStatusGetChar();
 	void RelayStatusSet(bool status);
 
 private:
@@ -84,6 +85,8 @@ public:
 	int NodeRelayOff(std::string ip);
 	bool NodeRelayStatus(std::string ip);
 	int getNodeId(std::string ip);
+
+    int PostNodeStatus(std::string server_add);
 
 private:
 	uint32_t node_count;
