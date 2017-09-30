@@ -114,6 +114,9 @@ void waitShortPress() {
     while (isButtonRelease()) {
         Thread::wait(100);
     }
+    while (isButtonPressed()) {
+        Thread::wait(100);
+    }    
 }
 
 HttpRequest *grHttpPost(NetworkInterface *network, char *address, char *body)
@@ -151,9 +154,9 @@ HttpRequest *grHttpGet(NetworkInterface* network, char *end_point)
         free(str);
         return NULL;
     }
-    printf("\n----- HTTP GET response -----\n");
-    dump_response(get_res);
-    printf("\n----- END HTTP GET response -----\n");
+    // printf("\n----- HTTP GET response -----\n");
+    // dump_response(get_res);
+    // printf("\n----- END HTTP GET response -----\n");
 
     return get_req;
 }
