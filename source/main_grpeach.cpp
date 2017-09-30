@@ -21,6 +21,7 @@
 #define DBG_INFO(...)			printf(__VA_ARGS__)
 
 // Signal for main thread
+bool isDisableRecording = false;
 osThreadId mainThreadID;
 uint8_t userPress = 0;
 rtos::Mutex muOverRecord;
@@ -48,6 +49,14 @@ static uint8_t audio_read_buff[READ_BUFF_NUM][READ_BUFF_SIZE]@ ".mirrorram";  //
 static uint8_t audio_read_buff[READ_BUFF_NUM][READ_BUFF_SIZE] __attribute((section("NC_BSS"),aligned(4)));  //4 bytes aligned! No cache memory
 #endif
 
+void disableRecording() {
+    isDisableRecording = true;
+}
+
+void enableRecording() {
+    isDisableRecording = false;
+}
+
 static void callback_audio_tans_end(void * p_data, int32_t result, void * p_app_data) {
     mail_t *mail = mail_box.alloc();
 
@@ -74,7 +83,7 @@ void audio_read_task(void const*) {
     audio->power(0x00); // mic on
     audio->inputVolume(0.8, 0.8);
 
-    rbsp_data_conf_t audio_write_data = {&callback_audio_tans_end, (void *)INFO_TYPE_WRITE_END};
+    // rbsp_data_conf_t audio_write_data = {&callback_audio_tans_end, (void *)INFO_TYPE_WRITE_END};
     rbsp_data_conf_t audio_read_data  = {&callback_audio_tans_end, (void *)INFO_TYPE_READ_END};
 
     // Read buffer setting
@@ -85,16 +94,19 @@ void audio_read_task(void const*) {
     }
 
     while (1) {
+        if (isDisableRecording == true) {
+            Thread::wait(100);
+        }
         osEvent evt = mail_box.get();
         // if(userButton == 0x00)
         // 	press+=1;
 
-        if (evt.status == osEventMail) {
+        // if (evt.status == osEventMail) {
             mail_t *mail = (mail_t *)evt.value.p;
 
-            if ((mail->info_type == INFO_TYPE_READ_END) && (mail->result > 0))
-            {
-                audio->write(mail->p_data, mail->result, &audio_write_data);
+            // if ((mail->info_type == INFO_TYPE_READ_END) && (mail->result > 0))
+            // {
+            //     audio->write(mail->p_data, mail->result, &audio_write_data);
 
                 if(isOverRecord == false && userPress != 0)
                 {
@@ -120,11 +132,11 @@ void audio_read_task(void const*) {
 	                  	osSignalSet(mainThreadID, 0x1);
 	                }
                 }
-            } else {
+            // } else {
                 audio->read(mail->p_data, READ_BUFF_SIZE, &audio_read_data);     // Resetting read buffer
-            }
+            // }
             mail_box.free(mail);
-        }
+        // }
     }
 }
 
@@ -271,7 +283,7 @@ int main_test_json_the()
 }
 
 int main_grpeach() {
-
+    Timer countTimer;
 	char serverResponse[1024];
 	unsigned char wavBuffHeader[44];
 
@@ -288,8 +300,8 @@ int main_grpeach() {
     // main processing
     bool isRecordDone = false;
     while(1) {
-    	// button
     	wavSize = 0;
+        enableRecording();
 
     	while(1)
     	{
@@ -320,6 +332,7 @@ int main_grpeach() {
     	osSignalWait(0x1, osWaitForever);
     	DBG_INFO("Main: Start send to server!\n");
 
+        disableRecording();
 
     	// Start request to server
     	// Get a wav file
@@ -336,9 +349,12 @@ int main_grpeach() {
     	//processResponseFromServer(res);
 
     	// Download and play file audio
-
-    	// Send outdio to server and get response
-
-        Thread::wait(100);
+        Thread::wait(200);
+        countTimer.start();
+        grDownloadFile(network, "file_to_write.txt", ADDRESS_SERVER);
+        countTimer.stop();
+        printf("Download done in %d ms, play file\r\n", countTimer.read_ms());
+        countTimer.reset();
+        grPlayWavFile("file_to_write.txt");
     }
 }
