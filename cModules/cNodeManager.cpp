@@ -320,18 +320,17 @@ int NodeManager::getNodeId(std::string ip)
 
 int NodeManager::getNodeIdByName(const string name)
 {
-    int res = -1;
     string tmp;
     for(int i = 0; i < MAX_NODE_DEVICE;i++)
     {
         tmp = this->node_list[i]->Name();
         if(name == tmp)
         {
-            res = i;
+            return i;
         }
     }
 
-    return res;
+    return -1;
 }
 
 string NodeManager::getIpDevice(int id)

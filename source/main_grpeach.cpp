@@ -143,9 +143,9 @@ void do_action(char* action, char* toStr)
 	        string name(pt);
 	        int id = peachDeviceManager->getNodeIdByName(name);
 	        printf("Id: %d\n", id);
-	        if( id > 0)
+	        if( id >= 0)
 	        {
-	        	printf("IP: %s\n", peachDeviceManager->getIpDevice(id));
+	        	printf("IP: %s\n", peachDeviceManager->getIpDevice(id).c_str());
 	        	peachDeviceManager->NodeRelayOn(peachDeviceManager->getIpDevice(id));
 	        }
 	        else
@@ -162,9 +162,9 @@ void do_action(char* action, char* toStr)
 	        DBG_INFO("%s\n", pt);
 	        string name(pt);
 	        int id = peachDeviceManager->getNodeIdByName(name);
-	        if( id > 0)
+	        if( id >= 0)
 	        {
-	        	printf("IP: %s\n", peachDeviceManager->getIpDevice(id));
+	        	printf("IP: %s\n", peachDeviceManager->getIpDevice(id).c_str());
 	        	peachDeviceManager->NodeRelayOff(peachDeviceManager->getIpDevice(id));
 	        }
 	        else
@@ -261,11 +261,19 @@ void getHeader(int size_of_data, unsigned char* header)
 
 int main_test_json_the()
 {
-	char body[1024] = "{\"response\":\"hello the!\",\"action\":\"on\",\"to\":\"fan,lamp,act\"}";
+	NetworkInterface* network = grInitEth();
+	peachDeviceManager = new NodeManager(network);
+    peachDeviceManager->NodeAdd(DEV_1_IP, DEV_1_NAME);
+    peachDeviceManager->NodeAdd(DEV_2_IP, DEV_2_NAME);
+	char body[1024] = "{\"response\":\"hello the!\",\"action\":\"off\",\"to\":\"fan,lamp,act\"}";
 	processResponseFromServer(body);
 	return 1;
 }
+
 int main_grpeach() {
+
+	char serverResponse[1024];
+	unsigned char wavBuffHeader[44];
 
 	NetworkInterface* network = grInitEth();
 	grSetupUsb();
@@ -315,19 +323,19 @@ int main_grpeach() {
 
     	// Start request to server
     	// Get a wav file
-    	unsigned char buff[44];
-    	getHeader(wavSize*READ_BUFF_SIZE,buff);
-    	memcpy(audio_frame_backup,buff,44);
+    	getHeader(wavSize*READ_BUFF_SIZE,wavBuffHeader);
+    	memcpy(audio_frame_backup,wavBuffHeader,44);
     	grStartUpload(network);
     	grUploadFile(network, audio_frame_backup, wavSize*READ_BUFF_SIZE + 44);
     	
     	// Get respone from server
-    	char res[1024];
-    	grEndUploadWithBody(network,res);
+    	grEndUploadWithBody(network,serverResponse);
+    	DBG_INFO("response:%s\n",serverResponse);
 
     	// process response from server
-    	processResponseFromServer(res);
+    	//processResponseFromServer(res);
 
+    	// Download and play file audio
 
     	// Send outdio to server and get response
 

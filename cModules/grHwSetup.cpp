@@ -131,7 +131,7 @@ void grSetupUsb() {
     // try to connect a MSD device
     printf("Waiting for usb\r\n");
     while(!msd.connect()) {
-        Thread::wait(500);
+        Thread::wait(200);
     }
 
     printf("USB connected \r\n");

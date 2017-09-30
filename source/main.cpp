@@ -50,6 +50,6 @@ int main() {
     // return main_test_node_devices();
     // return main_upload_file();
     //return main_upload_file_from_usb();
-    //return main_grpeach();
-    return main_test_json_the();
+    return main_grpeach();
+    //return main_test_json_the();
 }
