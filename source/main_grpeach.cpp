@@ -7,6 +7,10 @@
 #include "rtos.h"
 #include "grHwSetup.h"
 #include "grUtility.h"
+#include "Json.h"
+#include "cJson.h"
+#include "cNodeManager.h"
+#include <string>
 
 #define WRITE_BUFF_NUM         (16)
 #define READ_BUFF_SIZE         (4096)
@@ -21,6 +25,7 @@ osThreadId mainThreadID;
 uint8_t userPress = 0;
 rtos::Mutex muOverRecord;
 bool isOverRecord;
+NodeManager *peachDeviceManager;
 
 static int wavSize = 0; 
 rtos::Mutex mutexUserButton;
@@ -123,9 +128,152 @@ void audio_read_task(void const*) {
     }
 }
 
+void do_action(char* action, char* toStr)
+{
+	printf("Action:%s\n", action);
+	char *pt;
+	bool found = false;
+	if(strcmp(action,"on") == 0)
+	{
+		DBG_INFO("Do on device!\n");
+		pt = strtok (toStr,",");
+
+	    while (pt != NULL) {
+	        DBG_INFO("%s\n", pt);
+	        string name(pt);
+	        int id = peachDeviceManager->getNodeIdByName(name);
+	        printf("Id: %d\n", id);
+	        if( id > 0)
+	        {
+	        	printf("IP: %s\n", peachDeviceManager->getIpDevice(id));
+	        	peachDeviceManager->NodeRelayOn(peachDeviceManager->getIpDevice(id));
+	        }
+	        else
+	        	printf("Dont know device!\n");
+	        //on off 
+	        pt = strtok (NULL, ",");
+	    }
+	}
+	else if (strcmp(action,"off") == 0)
+	{
+		DBG_INFO("Do off device\n");
+		pt = strtok (toStr,",");
+	    while (pt != NULL) {
+	        DBG_INFO("%s\n", pt);
+	        string name(pt);
+	        int id = peachDeviceManager->getNodeIdByName(name);
+	        if( id > 0)
+	        {
+	        	printf("IP: %s\n", peachDeviceManager->getIpDevice(id));
+	        	peachDeviceManager->NodeRelayOff(peachDeviceManager->getIpDevice(id));
+	        }
+	        else
+	        	printf("Dont know device!\n");
+	        pt = strtok (NULL, ",");
+	    }
+	}
+	else
+	{
+		DBG_INFO("Dont know action\n");
+	}
+}
+void processResponseFromServer(char* body)
+{
+	Json json (body, strlen (body));
+	char valueAction[10] = "";
+	char valueTo[100] = "";
+	char keyAction[7]="action";
+	char keyTo[3]="to";
+
+	if(json.isValidJson())
+	{
+		DBG_INFO("Json valid!\n");
+		int keyIndex = json.findKeyIndexIn ( keyAction , 0 );
+	    if ( keyIndex == -1 )
+	    {
+	        // Error handling part ...
+	        printf("\"%s\" does not exist ... do something!!",keyAction);
+	    }
+	    else
+	    {
+	        // Find the first child index of key-node "city"
+	        int valueIndex = json.findChildIndexOf ( keyIndex, -1 );
+	        if ( valueIndex > 0 )
+	        {
+	            const char * valueStart  = json.tokenAddress ( valueIndex );
+	            int          valueLength = json.tokenLength ( valueIndex );
+	            strncpy ( valueAction, valueStart, valueLength );
+	            valueAction [ valueLength ] = 0; // NULL-terminate the string
+	        }
+	    }
+
+	    keyIndex = json.findKeyIndexIn ( keyTo , 0 );
+	    if ( keyIndex == -1 )
+	    {
+	        // Error handling part ...
+	        printf("\"%s\" does not exist ... do something!!",keyTo);
+	    }
+	    else
+	    {
+	        // Find the first child index of key-node "city"
+	        int valueIndex = json.findChildIndexOf ( keyIndex, -1 );
+	        if ( valueIndex > 0 )
+	        {
+	            const char * valueStart  = json.tokenAddress ( valueIndex );
+	            int          valueLength = json.tokenLength ( valueIndex );
+	            strncpy ( valueTo, valueStart, valueLength );
+	            valueTo [ valueLength ] = 0; // NULL-terminate the string
+
+	            do_action(valueAction,valueTo);
+	        }
+	    }
+	}
+	else
+		DBG_INFO("Json invalid!\n");	
+}
+void getHeader(int size_of_data, unsigned char* header)
+{
+	unsigned char wav_header[44] = {
+	0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56,
+	0x45, 0x66, 0x6d, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 
+	0x02, 0x00, 0x44, 0xac, 0x00, 0x00, 0x10, 0xb1, 0x02, 0x00, 0x04, 
+	0x00, 0x10, 0x00, 0x64, 0x61, 0x74, 0x61, 0x00, 0x00, 0x00, 0x00
+	};
+
+	memcpy(header,wav_header,44*sizeof(unsigned char));
+
+	int overallSize = size_of_data - 8;
+    unsigned char buffSize[4];
+    unsigned char buffOverall[4];
+
+    buffSize[0] = size_of_data & 0xff;
+    buffSize[1] = (size_of_data >> 8) & 0xff;
+    buffSize[2] = (size_of_data >> 16) & 0xff;
+    buffSize[3] = (size_of_data >> 24) & 0xff;
+    memcpy(header + 40,buffSize, 4 * sizeof(unsigned char));
+
+    buffOverall[0] = overallSize & 0xff;
+    buffOverall[1] = (overallSize >> 8) & 0xff;
+    buffOverall[2] = (overallSize >> 16) & 0xff;
+    buffOverall[3] = (overallSize >> 24) & 0xff;
+    memcpy(header + 4,buffSize, 4 * sizeof(unsigned char));
+}
+
+int main_test_json_the()
+{
+	char body[1024] = "{\"response\":\"hello the!\",\"action\":\"on\",\"to\":\"fan,lamp,act\"}";
+	processResponseFromServer(body);
+	return 1;
+}
 int main_grpeach() {
 
 	NetworkInterface* network = grInitEth();
+	grSetupUsb();
+
+	peachDeviceManager = new NodeManager(network);
+    peachDeviceManager->NodeAdd(DEV_1_IP, DEV_1_NAME);
+    peachDeviceManager->NodeAdd(DEV_2_IP, DEV_2_NAME);
+
     Thread audioReadTask(audio_read_task, NULL, osPriorityNormal, 1024*32);
 
     mainThreadID = osThreadGetId();
@@ -164,13 +312,22 @@ int main_grpeach() {
     	osSignalWait(0x1, osWaitForever);
     	DBG_INFO("Main: Start send to server!\n");
 
-    	cWav myWavObject("");
-    	unsigned char* buff = myWavObject.getHeader(wavSize*READ_BUFF_SIZE);
-    	memcpy(audio_frame_backup,buff,44);
 
+    	// Start request to server
+    	// Get a wav file
+    	unsigned char buff[44];
+    	getHeader(wavSize*READ_BUFF_SIZE,buff);
+    	memcpy(audio_frame_backup,buff,44);
     	grStartUpload(network);
     	grUploadFile(network, audio_frame_backup, wavSize*READ_BUFF_SIZE + 44);
-    	grEndUpload(network);
+    	
+    	// Get respone from server
+    	char res[1024];
+    	grEndUploadWithBody(network,res);
+
+    	// process response from server
+    	processResponseFromServer(res);
+
 
     	// Send outdio to server and get response
 

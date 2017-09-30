@@ -141,6 +141,11 @@ NodeDevice::NodeDevice(std::string ip, std::string name, int id)
 
 }
 
+std::string NodeDevice::Name()
+{
+    return this->name;
+}
+
 std::string NodeDevice::Ip()
 {
     return this->ip;
@@ -311,6 +316,27 @@ int NodeManager::getNodeId(std::string ip)
 
     logError("%s: invalid ip, can't find device accordingly\r\n", __PRETTY_FUNCTION__);
     return -1;
+}
+
+int NodeManager::getNodeIdByName(const string name)
+{
+    int res = -1;
+    string tmp;
+    for(int i = 0; i < MAX_NODE_DEVICE;i++)
+    {
+        tmp = this->node_list[i]->Name();
+        if(name == tmp)
+        {
+            res = i;
+        }
+    }
+
+    return res;
+}
+
+string NodeManager::getIpDevice(int id)
+{
+    return this->node_list[id]->Ip();
 }
 
 /************************* End of File ****************************************/
