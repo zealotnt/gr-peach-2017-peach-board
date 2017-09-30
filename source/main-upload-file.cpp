@@ -48,6 +48,7 @@ int main_upload_file_from_usb() {
     uint8_t *fileBuff;
     uint32_t fileLen;
     char file_path[sizeof(FLD_PATH) + FILE_NAME_LEN];
+    Timer countTimer;
 
     NetworkInterface* network = grInitEth();
     grEnableUSB1();
@@ -63,10 +64,16 @@ int main_upload_file_from_usb() {
         waitShortPress();
         grStartUpload(network);
 
-        waitShortPress();
         grUploadFile(network, fileBuff, fileLen);
 
-        waitShortPress();
         grEndUpload(network);
+
+        Thread::wait(200);
+        countTimer.start();
+        grDownloadFile(network, "file_to_write.txt", ADDRESS_SERVER);
+        countTimer.stop();
+        printf("Download done in %d ms, play file\r\n", countTimer.read_ms());
+        countTimer.reset();
+        grPlayWavFile("file_to_write.txt");
     }
 }
