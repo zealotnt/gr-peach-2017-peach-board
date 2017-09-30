@@ -323,6 +323,26 @@ int NodeManager::getNodeId(std::string ip)
     return -1;
 }
 
+int NodeManager::getNodeIdByName(const string name)
+{
+    string tmp;
+    for(int i = 0; i < MAX_NODE_DEVICE;i++)
+    {
+        tmp = this->node_list[i]->Name();
+        if(name == tmp)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+string NodeManager::getIpDevice(int id)
+{
+    return this->node_list[id]->Ip();
+}
+
 int NodeManager::PostNodeStatus(std::string server_add)
 {
     std::string body;

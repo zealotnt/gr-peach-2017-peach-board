@@ -269,3 +269,24 @@ bool cWav::writeAudio(uint8_t* p_data,int size)
     toggle_led(LED1);
     return false;
 }
+
+unsigned char* cWav::getHeader(int size_of_data)
+{
+    int overallSize = size_of_data - 8;
+    unsigned char buffSize[4];
+    unsigned char buffOverall[4];
+
+    buffSize[0] = size_of_data & 0xff;
+    buffSize[1] = (size_of_data >> 8) & 0xff;
+    buffSize[2] = (size_of_data >> 16) & 0xff;
+    buffSize[3] = (size_of_data >> 24) & 0xff;
+    memcpy(wav_header + 40,buffSize, 4 * sizeof(unsigned char));
+
+    buffOverall[0] = overallSize & 0xff;
+    buffOverall[1] = (overallSize >> 8) & 0xff;
+    buffOverall[2] = (overallSize >> 16) & 0xff;
+    buffOverall[3] = (overallSize >> 24) & 0xff;
+    memcpy(wav_header + 4,buffSize, 4 * sizeof(unsigned char));
+
+    return wav_header;
+}

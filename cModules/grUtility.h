@@ -70,6 +70,7 @@ HttpRequest *grHttpGet(NetworkInterface* network, char *end_point);
 
 int grStartUpload(NetworkInterface* network);
 int grEndUpload(NetworkInterface* network);
+void grEndUploadWithBody(NetworkInterface* network, char* body);
 int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen);
 int grReadFile(char *filePath, uint8_t **fileVal, uint32_t *fileLen);
 

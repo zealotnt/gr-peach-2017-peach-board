@@ -34,11 +34,6 @@
 #include "grHwSetup.h"
 #include "cNodeManager.h"
 
-#define DEV_1_IP            "http://192.168.1.177"
-#define DEV_1_NAME          "lamp-1"
-
-#define DEV_2_IP            "http://192.168.1.178"
-#define DEV_2_NAME          "fan-1"
 
 int main_test_node_devices() {
     NetworkInterface* network = grInitEth();

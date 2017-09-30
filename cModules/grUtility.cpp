@@ -114,6 +114,9 @@ void waitShortPress() {
     while (isButtonRelease()) {
         Thread::wait(100);
     }
+    while (isButtonPressed()) {
+        Thread::wait(100);
+    }
 }
 
 HttpRequest *grHttpPost(NetworkInterface *network, char *address, char *body)
@@ -171,9 +174,9 @@ HttpRequest *grHttpGet(NetworkInterface* network, char *end_point)
         free(str);
         return NULL;
     }
-    printf("\n----- HTTP GET response -----\n");
-    dump_response(get_res);
-    printf("\n----- END HTTP GET response -----\n");
+    // printf("\n----- HTTP GET response -----\n");
+    // dump_response(get_res);
+    // printf("\n----- END HTTP GET response -----\n");
 
     return get_req;
 }
@@ -189,16 +192,29 @@ int grStartUpload(NetworkInterface* network)
     return 0;
 }
 
+// Return body
 int grEndUpload(NetworkInterface* network)
 {
     HttpRequest *end_req = grHttpGet(network, "/end-upload");
     if (end_req == NULL) {
         return -1;
     }
+    delete end_req;
+    return 1;
+}
+
+void grEndUploadWithBody(NetworkInterface* network, char* body)
+{
+    HttpRequest *end_req = grHttpGet(network, "/end-upload");
+    if (end_req == NULL) {
+        return;
+    }
+
+    HttpResponse* response = end_req->getLastResponse();
+
+    strcpy(body,response->get_body_as_string().c_str());
 
     delete end_req;
-
-    return 0;
 }
 
 int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen)

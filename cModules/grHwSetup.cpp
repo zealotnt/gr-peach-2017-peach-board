@@ -36,7 +36,9 @@
 /******************************************************************************/
 /* LOCAL CONSTANT AND COMPILE SWITCH SECTION                                  */
 /******************************************************************************/
-
+#define WRITE_BUFF_NUM         (16)
+#define READ_BUFF_SIZE         (4096)
+#define READ_BUFF_NUM          (16)
 
 /******************************************************************************/
 /* LOCAL TYPE DEFINITION SECTION                                              */
@@ -51,8 +53,7 @@
 /******************************************************************************/
 /* MODULE'S LOCAL VARIABLE DEFINITION SECTION                                 */
 /******************************************************************************/
-TLV320_RBSP audio(P10_13, I2C_SDA, I2C_SCL, P4_4, P4_5, P4_7, P4_6,
-                  0x80, (AUDIO_WRITE_BUFF_NUM - 1), 0);
+TLV320_RBSP audio(P10_13, I2C_SDA, I2C_SCL, P4_4, P4_5, P4_7, P4_6, 0x80, WRITE_BUFF_NUM, READ_BUFF_NUM); // I2S Codec
 DigitalIn  button(USER_BUTTON0);
 DigitalOut usb1en(P3_8);
 Serial pc(USBTX, USBRX, 115200);
@@ -90,7 +91,14 @@ static void callback_audio_write_end(void * p_data, int32_t result, void * p_app
 /* GLOBAL FUNCTION DEFINITION SECTION                                         */
 /******************************************************************************/
 bool isButtonPressed() {
-    return (button.read() == 0);
+    if (button.read() == 0) {
+        Thread::wait(200);
+        if (button.read() == 0) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 bool isButtonRelease() {
@@ -123,7 +131,7 @@ void grSetupUsb() {
     // try to connect a MSD device
     printf("Waiting for usb\r\n");
     while(!msd.connect()) {
-        Thread::wait(500);
+        Thread::wait(200);
     }
 
     printf("USB connected \r\n");
