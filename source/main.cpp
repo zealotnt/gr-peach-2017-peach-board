@@ -37,6 +37,7 @@ int main_test_json();
 int main_test_node_devices();
 int main_upload_file();
 int main_upload_file_from_usb();
+int main_sound_record_play_echo();
 
 int main() {
     // return main_http();
@@ -46,7 +47,8 @@ int main() {
     // return main_wav_player_func();
     // return main_broadcast_receive();
     // return main_test_json();
-    // return main_test_node_devices();
+    return main_test_node_devices();
     // return main_upload_file();
-    return main_upload_file_from_usb();
+    // return main_upload_file_from_usb();
+    // main_sound_record_play_echo();
 }
