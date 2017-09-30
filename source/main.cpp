@@ -38,7 +38,6 @@ int main_test_node_devices();
 int main_upload_file();
 int main_upload_file_from_usb();
 int main_grpeach();
-int main_test_json_the();
 int main_sound_record_play_echo();
 
 int main() {
@@ -53,6 +52,5 @@ int main() {
     // return main_upload_file();
     // return main_upload_file_from_usb();
     // return main_sound_record_play_echo();
-    // return main_test_json_the();
     return main_grpeach();
 }

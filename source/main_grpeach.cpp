@@ -271,21 +271,11 @@ void getHeader(int size_of_data, unsigned char* header)
     memcpy(header + 4,buffSize, 4 * sizeof(unsigned char));
 }
 
-int main_test_json_the()
-{
-	NetworkInterface* network = grInitEth();
-	peachDeviceManager = new NodeManager(network);
-    peachDeviceManager->NodeAdd(DEV_1_IP, DEV_1_NAME);
-    peachDeviceManager->NodeAdd(DEV_2_IP, DEV_2_NAME);
-	char body[1024] = "{\"response\":\"hello the!\",\"action\":\"off\",\"to\":\"fan,lamp,act\"}";
-	processResponseFromServer(body);
-	return 1;
-}
-
 int main_grpeach() {
     Timer countTimer;
 	char serverResponse[1024];
 	unsigned char wavBuffHeader[44];
+    bool status1, status2;
 
 	NetworkInterface* network = grInitEth();
 	grSetupUsb();
@@ -293,6 +283,15 @@ int main_grpeach() {
 	peachDeviceManager = new NodeManager(network);
     peachDeviceManager->NodeAdd(DEV_1_IP, DEV_1_NAME);
     peachDeviceManager->NodeAdd(DEV_2_IP, DEV_2_NAME);
+
+    if (peachDeviceManager->NodeStatusUpdate(DEV_1_IP, &status1) != 0) {
+        printf("Can't update %s status\r\n", DEV_1_NAME);
+    }
+
+    if (peachDeviceManager->NodeStatusUpdate(DEV_2_IP, &status2) != 0) {
+        printf("Can't update %s status\r\n", DEV_2_NAME);
+    }
+    peachDeviceManager->PostNodeStatus(ADDRESS_SERVER);
 
     Thread audioReadTask(audio_read_task, NULL, osPriorityNormal, 1024*32);
 
@@ -346,7 +345,7 @@ int main_grpeach() {
     	DBG_INFO("response:%s\n",serverResponse);
 
     	// process response from server
-    	//processResponseFromServer(res);
+    	processResponseFromServer(serverResponse);
 
     	// Download and play file audio
         Thread::wait(200);

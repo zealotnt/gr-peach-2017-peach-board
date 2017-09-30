@@ -40,7 +40,7 @@
 #define MAX_NODE_DEVICE				2
 
 #define DEV_1_IP            "http://192.168.1.177"
-#define DEV_1_NAME          "lamp"
+#define DEV_1_NAME          "light"
 
 #define DEV_2_IP            "http://192.168.1.178"
 #define DEV_2_NAME          "fan"
