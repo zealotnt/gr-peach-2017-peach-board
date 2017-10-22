@@ -30,7 +30,6 @@ typedef enum
 } content_type_t;
 
 typedef struct {
-    content_type_t content_type;
     bool eof;
 } media_stream_t;
 

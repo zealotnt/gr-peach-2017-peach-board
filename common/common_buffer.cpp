@@ -11,21 +11,24 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdio.h>
+#include "rtos.h"
+#include "mbed.h"
 
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
-// #include "esp_log.h"
 #include "spiram_fifo.h"
-// #include "byteswap.h"
+#include "byteswap.h"
+
+#ifndef max
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+#ifndef min
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
 #define TAG "common"
 
-#define __bswap_32(a)           a
-#define __bswap_16(a)           a
-#define ESP_LOGE(...)
-#define vTaskDelay(...)
+#define ESP_LOGE(...)           printf(__VA_ARGS__); printf("\r\n");
 
-static void buf_move_remaining_bytes_to_front(buffer_t *buf)
+static void buf_move_remaining_bytes_to_front(common_buffer_t *buf)
 {
     size_t unread_data = buf_data_unread(buf);
 
@@ -37,9 +40,9 @@ static void buf_move_remaining_bytes_to_front(buffer_t *buf)
 
 
 /* creates a buffer struct and its storage on the heap */
-buffer_t *buf_create(size_t len)
+common_buffer_t *buf_create(size_t len)
 {
-    buffer_t* buf = (buffer_t*)calloc(1, sizeof(buffer_t));
+    common_buffer_t* buf = (common_buffer_t*)calloc(1, sizeof(common_buffer_t));
 
     buf->len = len;
     buf->base = (uint8_t *)calloc(len, sizeof(uint8_t));
@@ -55,9 +58,9 @@ buffer_t *buf_create(size_t len)
 }
 
 /* wraps an existing buffer */
-buffer_t *buf_wrap(void *existing, size_t len)
+common_buffer_t *buf_wrap(void *existing, size_t len)
 {
-    buffer_t* buf = (buffer_t*)calloc(1, sizeof(buffer_t));
+    common_buffer_t* buf = (common_buffer_t*)calloc(1, sizeof(common_buffer_t));
 
     buf->len = len;
     buf->base = (uint8_t *)existing;
@@ -69,7 +72,7 @@ buffer_t *buf_wrap(void *existing, size_t len)
 }
 
 /* free the buffer struct and its storage */
-int buf_destroy(buffer_t *buf)
+int buf_destroy(common_buffer_t *buf)
 {
     if(buf == NULL)
         return -1;
@@ -83,7 +86,7 @@ int buf_destroy(buffer_t *buf)
 }
 
 /* TODO */
-int buf_resize(buffer_t *buf, size_t new_size)
+int buf_resize(common_buffer_t *buf, size_t new_size)
 {
     if(buf == NULL)
         return -1;
@@ -110,7 +113,7 @@ int buf_resize(buffer_t *buf, size_t new_size)
     return 0;
 }
 
-size_t buf_write(buffer_t *buf, const void* from, size_t len)
+size_t buf_write(common_buffer_t *buf, const void* from, size_t len)
 {
     size_t bytes_to_write = min(buf_free_capacity_after_purge(buf), len);
 
@@ -123,7 +126,7 @@ size_t buf_write(buffer_t *buf, const void* from, size_t len)
 }
 
 /* available unused capacity */
-size_t buf_free_capacity_after_purge(buffer_t *buf)
+size_t buf_free_capacity_after_purge(common_buffer_t *buf)
 {
     if(buf == NULL) return -1;
 
@@ -132,7 +135,7 @@ size_t buf_free_capacity_after_purge(buffer_t *buf)
 }
 
 /* amount of bytes unread */
-size_t buf_data_total(buffer_t *buf)
+size_t buf_data_total(common_buffer_t *buf)
 {
     if(buf == NULL) return -1;
 
@@ -140,7 +143,7 @@ size_t buf_data_total(buffer_t *buf)
 }
 
 /* amount of bytes unread */
-size_t buf_data_unread(buffer_t *buf)
+size_t buf_data_unread(common_buffer_t *buf)
 {
     if(buf == NULL) return -1;
 
@@ -148,7 +151,7 @@ size_t buf_data_unread(buffer_t *buf)
 }
 
 /* amount of bytes already consumed */
-size_t buf_data_stale(buffer_t *buf)
+size_t buf_data_stale(common_buffer_t *buf)
 {
     if(buf == NULL) return -1;
 
@@ -157,7 +160,7 @@ size_t buf_data_stale(buffer_t *buf)
 
 
 
-size_t fill_read_buffer(buffer_t *buf)
+size_t fill_read_buffer(common_buffer_t *buf)
 {
     buf_move_remaining_bytes_to_front(buf);
     size_t bytes_to_read = min(buf_free_capacity_after_purge(buf), spiRamFifoFill());
@@ -171,7 +174,7 @@ size_t fill_read_buffer(buffer_t *buf)
 }
 
 
-int buf_seek_rel(buffer_t *buf, uint32_t offset)
+int buf_seek_rel(common_buffer_t *buf, uint32_t offset)
 {
     if (buf == NULL) return -1;
 
@@ -195,7 +198,7 @@ int buf_seek_rel(buffer_t *buf, uint32_t offset)
     return 0;
 }
 
-int buf_seek_abs(buffer_t *buf, uint32_t pos)
+int buf_seek_abs(common_buffer_t *buf, uint32_t pos)
 {
     if (buf == NULL) return -1;
 
@@ -211,7 +214,7 @@ int buf_seek_abs(buffer_t *buf, uint32_t pos)
     return 0;
 }
 
-size_t buf_read(void * ptr, size_t size, size_t count, buffer_t *buf)
+size_t buf_read(void * ptr, size_t size, size_t count, common_buffer_t *buf)
 {
     if(size == 0 || count == 0)
         return 0;
@@ -225,7 +228,8 @@ size_t buf_read(void * ptr, size_t size, size_t count, buffer_t *buf)
     uint16_t delay = 0;
     while(bytes_to_copy > buf_data_unread(buf) && delay < 5000) {
         fill_read_buffer(buf);
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+        // vTaskDelay(50 / portTICK_PERIOD_MS);
+        Thread::wait(50);
         delay += 50;
     }
 
@@ -244,7 +248,7 @@ size_t buf_read(void * ptr, size_t size, size_t count, buffer_t *buf)
 
 
 //read big endian 16-Bit from fileposition(position)
-uint16_t fread16(buffer_t *buf, size_t position)
+uint16_t fread16(common_buffer_t *buf, size_t position)
 {
     uint16_t tmp16;
     buf_seek_rel(buf, position);
@@ -253,7 +257,7 @@ uint16_t fread16(buffer_t *buf, size_t position)
 }
 
 //read big endian 32-Bit from fileposition(position)
-uint32_t fread32(buffer_t *buf, size_t position)
+uint32_t fread32(common_buffer_t *buf, size_t position)
 {
     uint32_t tmp32;
     buf_seek_rel(buf, position);

@@ -9,27 +9,20 @@
 #include <stdint.h>
 #include <string.h>
 
-// #include "esp_log.h"
-
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
-
 #include "../mad/mad.h"
 #include "../mad/stream.h"
 #include "../mad/frame.h"
 #include "../mad/synth.h"
 
-// #include "driver/i2s.h"
-// #include "audio_renderer.h"
 #include "audio_player.h"
 #include "spiram_fifo.h"
 #include "mp3_decoder.h"
 #include "common_buffer.h"
 
-#define TAG "mad_decoder"
+#define TAG "[mad_decoder] "
 
-#define ESP_LOGI(...)
-#define ESP_LOGE(...)
+#define ESP_LOGI(tag, ...)                           printf(tag); printf(__VA_ARGS__); printf("\r\n");
+#define ESP_LOGE(tag, ...)                           printf(tag); printf(__VA_ARGS__); printf("\r\n");
 #define renderer_zero_dma_buffer(...)
 #define vTaskDelete(...)
 
@@ -42,15 +35,7 @@
 
 static long buf_underrun_cnt;
 
-/* default MAD buffer format */
-// pcm_format_t mad_buffer_fmt = {
-//     .sample_rate = 44100,
-//     .bit_depth = I2S_BITS_PER_SAMPLE_16BIT,
-//     .num_channels = 2,
-//     .buffer_format = PCM_LEFT_RIGHT
-// };
-
-static enum mad_flow input(struct mad_stream *stream, buffer_t *buf, player_t *player)
+static enum mad_flow input(struct mad_stream *stream, common_buffer_t *buf, player_t *player)
 {
     int bytes_to_read;
 
@@ -122,7 +107,7 @@ void mp3_decoder_task(void const* pvParameters)
     stream = (struct mad_stream *)malloc(sizeof(struct mad_stream));
     frame = (struct mad_frame *)malloc(sizeof(struct mad_frame));
     synth = (struct mad_synth *)malloc(sizeof(struct mad_synth));
-    buffer_t *buf = buf_create(MAX_FRAME_SIZE);
+    common_buffer_t *buf = buf_create(MAX_FRAME_SIZE);
 
     if (stream==NULL) { ESP_LOGE(TAG, "malloc(stream) failed\n"); return; }
     if (synth==NULL) { ESP_LOGE(TAG, "malloc(synth) failed\n"); return; }
@@ -184,7 +169,7 @@ void mp3_decoder_task(void const* pvParameters)
     player->decoder_command = CMD_NONE;
     ESP_LOGI(TAG, "decoder stopped");
 
-    ESP_LOGI(TAG, "MAD decoder stack: %d\n", uxTaskGetStackHighWaterMark(NULL));
+    // ESP_LOGI(TAG, "MAD decoder stack: %d\n", uxTaskGetStackHighWaterMark(NULL));
     vTaskDelete(NULL);
 }
 
@@ -197,6 +182,9 @@ void set_dac_sample_rate(int rate)
 /* render callback for the libmad synth */
 void render_sample_block(short *sample_buff_ch0, short *sample_buff_ch1, int num_samples, unsigned int num_channels)
 {
+    static uint32_t count = 0;
+    printf("render_sample_block %d \r\n", count);
+    count ++;
     // mad_buffer_fmt.num_channels = num_channels;
     // uint32_t len = num_samples * sizeof(short) * num_channels;
     // render_samples((char*) sample_buff_ch0, len, &mad_buffer_fmt);

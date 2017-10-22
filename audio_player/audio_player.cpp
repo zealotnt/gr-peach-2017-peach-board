@@ -24,10 +24,11 @@
 #include "cNodeManager.h"
 #include <string>
 
-#define TAG "audio_player"
+#define TAG "[audio_player] "
 
-#define ESP_LOGI(...)
-#define ESP_LOGE(...)
+#define ESP_LOGI(tag, ...)           printf(tag); printf(__VA_ARGS__); printf("\r\n");
+#define ESP_LOGE(tag, ...)           printf(tag); printf(__VA_ARGS__); printf("\r\n");
+
 // #define PRIO_MAD configMAX_PRIORITIES - 2
 
 static player_t *player_instance = NULL;
@@ -35,48 +36,9 @@ static component_status_t player_status = UNINITIALIZED;
 
 static int start_decoder_task(player_t *player)
 {
-    // TaskFunction_t task_func;
-    char * task_name;
-    uint16_t stack_depth;
+    ESP_LOGI(TAG, "creating decoder task");
 
-    ESP_LOGI(TAG, "RAM left %d", esp_get_free_heap_size());
-
-    // switch (player->media_stream->content_type)
-    // {
-    //     case AUDIO_MPEG:
-            // task_func = mp3_decoder_task;
-            // task_name = "mp3_decoder_task";
-            // stack_depth = 8448;
-            // break;
-
-        // case AUDIO_MP4:
-        //     task_func = libfaac_decoder_task;
-        //     task_name = "libfaac_decoder_task";
-        //     stack_depth = 55000;
-        //     break;
-
-        // case AUDIO_AAC:
-        // case OCTET_STREAM: // probably .aac
-        //     task_func = fdkaac_decoder_task;
-        //     task_name = "fdkaac_decoder_task";
-        //     stack_depth = 6144;
-        //     break;
-
-    //     default:
-    //         ESP_LOGE(TAG, "unknown mime type: %d", player->media_stream->content_type);
-    //         return -1;
-    // }
-
-    Thread mp3DecoderTask(mp3_decoder_task, NULL, osPriorityNormal, 8448*32);
-    // if (xTaskCreatePinnedToCore(task_func, task_name, stack_depth, player,
-    // PRIO_MAD, NULL, 1) != pdPASS) {
-    //     ESP_LOGE(TAG, "ERROR creating decoder task! Out of memory?");
-    //     return -1;
-    // } else {
-    //     player->decoder_status = RUNNING;
-    // }
-
-    ESP_LOGI(TAG, "created decoder task: %s", task_name);
+    Thread mp3DecoderTask(mp3_decoder_task, (void *)player, osPriorityNormal, 8448*32);
 
     return 0;
 }
