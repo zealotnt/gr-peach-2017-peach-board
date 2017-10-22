@@ -39,6 +39,7 @@ int main_upload_file();
 int main_upload_file_from_usb();
 int main_grpeach();
 int main_sound_record_play_echo();
+int main_dec_mp3();
 
 int main() {
     // return main_http();
@@ -52,5 +53,6 @@ int main() {
     // return main_upload_file();
     // return main_upload_file_from_usb();
     // return main_sound_record_play_echo();
-    return main_grpeach();
+    return main_dec_mp3();
+    // return main_grpeach();
 }
