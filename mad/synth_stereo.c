@@ -937,3 +937,17 @@ void mad_synth_frame(struct mad_synth *synth, struct mad_frame const *frame)
   synth_frame(synth, frame, nch, ns);
   synth->phase = (synth->phase + ns) % 16;
 }
+
+/* Called by the NXP modifications of libmad. Sets the needed output sample rate. */
+void set_dac_sample_rate(int rate)
+{
+    // mad_buffer_fmt.sample_rate = rate;
+}
+
+/* render callback for the libmad synth */
+void render_sample_block(short *sample_buff_ch0, short *sample_buff_ch1, int num_samples, unsigned int num_channels)
+{
+    static unsigned int count = 0;
+    printf("render_sample_block %d \r\n", count);
+    count ++;
+}

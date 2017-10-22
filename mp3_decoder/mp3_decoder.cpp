@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
+#include "rtos.h"
+#include "mbed.h"
 
 #include "../mad/mad.h"
 #include "../mad/stream.h"
@@ -68,6 +71,7 @@ static enum mad_flow input(struct mad_stream *stream, common_buffer_t *buf, play
             //We both silence the output as well as wait a while by pushing silent samples into the i2s system.
             //This waits for about 200mS
             renderer_zero_dma_buffer();
+            Thread::wait(200);
         } else {
             //Read some bytes from the FIFO to re-fill the buffer.
             fill_read_buffer(buf);
@@ -96,6 +100,7 @@ static enum mad_flow error(void *data, struct mad_stream *stream, struct mad_fra
 //output it to the I2S port.
 void mp3_decoder_task(void const* pvParameters)
 {
+    ESP_LOGI(TAG, "mp3_decoder_task: pvParameters=0x%x", (uint32_t)pvParameters);
     player_t *player = (player_t *)pvParameters;
 
     int ret;
@@ -103,6 +108,7 @@ void mp3_decoder_task(void const* pvParameters)
     struct mad_frame *frame;
     struct mad_synth *synth;
 
+    Thread::wait(1000);
     //Allocate structs needed for mp3 decoding
     stream = (struct mad_stream *)malloc(sizeof(struct mad_stream));
     frame = (struct mad_frame *)malloc(sizeof(struct mad_frame));
@@ -172,22 +178,3 @@ void mp3_decoder_task(void const* pvParameters)
     // ESP_LOGI(TAG, "MAD decoder stack: %d\n", uxTaskGetStackHighWaterMark(NULL));
     vTaskDelete(NULL);
 }
-
-/* Called by the NXP modifications of libmad. Sets the needed output sample rate. */
-void set_dac_sample_rate(int rate)
-{
-    // mad_buffer_fmt.sample_rate = rate;
-}
-
-/* render callback for the libmad synth */
-void render_sample_block(short *sample_buff_ch0, short *sample_buff_ch1, int num_samples, unsigned int num_channels)
-{
-    static uint32_t count = 0;
-    printf("render_sample_block %d \r\n", count);
-    count ++;
-    // mad_buffer_fmt.num_channels = num_channels;
-    // uint32_t len = num_samples * sizeof(short) * num_channels;
-    // render_samples((char*) sample_buff_ch0, len, &mad_buffer_fmt);
-    // return;
-}
-

@@ -24,7 +24,9 @@
 static int fifoRpos;
 static int fifoWpos;
 static int fifoFill;
-Mutex mux, semCanWrite, semCanRead;
+Semaphore mux(1);
+Semaphore semCanWrite(1);
+Semaphore semCanRead(1);
 static long fifoOvfCnt, fifoUdrCnt;
 
 //Low watermark where we restart the reader thread.
@@ -55,15 +57,15 @@ int spiRamFifoInit() {
 }
 
 void spiRamFifoReset() {
-    mux.lock();
+    mux.wait();
     fifoRpos=0;
     fifoWpos=0;
     fifoFill=0;
     fifoOvfCnt=0;
     fifoUdrCnt=0;
-    semCanWrite.unlock();
-    semCanRead.lock();
-    mux.unlock();
+    semCanWrite.release();
+    semCanRead.wait();
+    mux.release();
 }
 
 //Read bytes from the FIFO
@@ -73,13 +75,13 @@ void spiRamFifoRead(char *buff, int len) {
         n = len;
         if (n>SPIREADSIZE) n=SPIREADSIZE;           //don't read more than SPIREADSIZE
         if (n>(SPIRAMSIZE-fifoRpos)) n = SPIRAMSIZE - fifoRpos; //don't read past end of buffer
-        mux.lock();
+        mux.wait();
         if (fifoFill < n) {
 //          printf("FIFO empty.\n");
             //Drat, not enough data in FIFO. Wait till there's some written and try again.
             fifoUdrCnt++;
-            mux.unlock();
-            if (fifoFill < FIFO_LOWMARK) semCanRead.lock();
+            mux.release();
+            if (fifoFill < FIFO_LOWMARK) semCanRead.wait();
         } else {
             //Read the data.
             spiRamRead(fifoRpos, buff, n);
@@ -88,8 +90,8 @@ void spiRamFifoRead(char *buff, int len) {
             fifoFill -= n;
             fifoRpos += n;
             if (fifoRpos>=SPIRAMSIZE) fifoRpos=0;
-            mux.unlock();
-            semCanWrite.unlock(); //Indicate writer thread there's some free room in the fifo
+            mux.release();
+            semCanWrite.release(); //Indicate writer thread there's some free room in the fifo
         }
     }
 }
@@ -108,14 +110,14 @@ void spiRamFifoWrite(const char *buff, int buffLen) {
             n = SPIRAMSIZE - fifoWpos;
         }
 
-        mux.lock();
+        mux.wait();
         if ((SPIRAMSIZE - fifoFill) < n) {
             // printf("FIFO full.\n");
             // Drat, not enough free room in FIFO. Wait till there's some read and try again.
             fifoOvfCnt++;
-            mux.unlock();
-            semCanWrite.lock();
-            Thread::yield();
+            mux.release();
+            semCanWrite.wait();
+            // Thread::yield();
         } else {
             // Write the data.
             spiRamWrite(fifoWpos, buff, n);
@@ -124,8 +126,8 @@ void spiRamFifoWrite(const char *buff, int buffLen) {
             fifoFill += n;
             fifoWpos += n;
             if (fifoWpos >= SPIRAMSIZE) fifoWpos = 0;
-            mux.unlock();
-            semCanRead.unlock(); // Tell reader thread there's some data in the fifo.
+            mux.release();
+            semCanRead.release(); // Tell reader thread there's some data in the fifo.
         }
     }
 }
@@ -133,9 +135,9 @@ void spiRamFifoWrite(const char *buff, int buffLen) {
 //Get amount of bytes in use
 int spiRamFifoFill() {
     int ret;
-    mux.lock();
+    mux.wait();
     ret=fifoFill;
-    mux.unlock();
+    mux.release();
     return ret;
 }
 
@@ -149,17 +151,17 @@ int spiRamFifoLen() {
 
 long spiRamGetOverrunCt() {
     long ret;
-    mux.lock();
+    mux.wait();
     ret=fifoOvfCnt;
-    mux.unlock();
+    mux.release();
     return ret;
 }
 
 long spiRamGetUnderrunCt() {
     long ret;
-    mux.lock();
+    mux.wait();
     ret=fifoUdrCnt;
-    mux.unlock();
+    mux.release();
     return ret;
 }
 

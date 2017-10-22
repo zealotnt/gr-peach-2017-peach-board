@@ -24,9 +24,9 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-#define TAG "common"
+#define TAG "[common] "
 
-#define ESP_LOGE(...)           printf(__VA_ARGS__); printf("\r\n");
+#define ESP_LOGE(tag, ...)           printf(tag); printf(__VA_ARGS__); printf("\r\n");
 
 static void buf_move_remaining_bytes_to_front(common_buffer_t *buf)
 {

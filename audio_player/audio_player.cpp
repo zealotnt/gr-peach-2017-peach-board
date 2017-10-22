@@ -70,14 +70,6 @@ int audio_stream_consumer(const char *recv_buf, ssize_t bytes_read,
     bool enough_buffer = fill_level > min_fill_lvl;
 
     bool early_start = (bytes_in_buf > 1028 && player->media_stream->eof);
-    if (player->decoder_status != RUNNING && (enough_buffer || early_start)) {
-
-        // buffer is filled, start decoder
-        if (start_decoder_task(player) != 0) {
-            ESP_LOGE(TAG, "failed to start decoder task");
-            return -1;
-        }
-    }
 
     t = (t + 1) & 255;
     if (t == 0) {
