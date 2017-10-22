@@ -31,6 +31,8 @@
 # include "string.h"
 //# include "lpc_io.h"
 
+pSetDacSampleRateHandler_t pSetDacSampleRate = NULL;
+pRenderSampleBlockHandler_t pRenderSampleBlock = NULL;
 
 // #define SAVED_SAMPLE_BUFF_LEN   240000
 // unsigned int saved_idx = 0;
@@ -738,7 +740,10 @@ void synth_full(struct mad_synth *synth, struct mad_frame const *frame,
     }  /* Channel For */
 
     /* Render block */
-    render_sample_block(short_sample_buff[0], short_sample_buff[1], 32, nch);
+    if (pRenderSampleBlock != NULL) {
+        // render_sample_block(short_sample_buff[0], short_sample_buff[1], 32, nch);
+        pRenderSampleBlock(short_sample_buff[0], short_sample_buff[1], 32, nch);
+    }
 
     phase = (phase + 1) % 16;
 
@@ -900,7 +905,10 @@ void synth_half(struct mad_synth *synth, struct mad_frame const *frame,
     } /* Channel For */
 
     /* Block render */
-    render_sample_block(short_sample_buff[0], short_sample_buff[1], 16, nch);
+    if (pRenderSampleBlock != NULL) {
+        // render_sample_block(short_sample_buff[0], short_sample_buff[1], 32, nch);
+        pRenderSampleBlock(short_sample_buff[0], short_sample_buff[1], 32, nch);
+    }
 
     phase = (phase + 1) % 16;
 
@@ -921,7 +929,9 @@ void mad_synth_frame(struct mad_synth *synth, struct mad_frame const *frame)
   ns  = MAD_NSBSAMPLES(&frame->header);
 
   synth->pcm.samplerate = frame->header.samplerate;
-  set_dac_sample_rate(synth->pcm.samplerate);
+  if (pSetDacSampleRate != NULL) {
+    pSetDacSampleRate(synth->pcm.samplerate);
+  }
   synth->pcm.channels   = nch;
   synth->pcm.length     = 32 * ns;
 
@@ -930,7 +940,9 @@ void mad_synth_frame(struct mad_synth *synth, struct mad_frame const *frame)
   if (frame->options & MAD_OPTION_HALFSAMPLERATE) {
     synth->pcm.samplerate /= 2;
     synth->pcm.length     /= 2;
-    set_dac_sample_rate(synth->pcm.samplerate);
+    if (pSetDacSampleRate != NULL) {
+    pSetDacSampleRate(synth->pcm.samplerate);
+    }
     synth_frame = synth_half;
   }
 
@@ -939,15 +951,12 @@ void mad_synth_frame(struct mad_synth *synth, struct mad_frame const *frame)
 }
 
 /* Called by the NXP modifications of libmad. Sets the needed output sample rate. */
-void set_dac_sample_rate(int rate)
+void register_set_dac_sample_rate(pSetDacSampleRateHandler_t handler)
 {
-    // mad_buffer_fmt.sample_rate = rate;
+  pSetDacSampleRate = handler;
 }
 
-/* render callback for the libmad synth */
-void render_sample_block(short *sample_buff_ch0, short *sample_buff_ch1, int num_samples, unsigned int num_channels)
+void register_render_sample_block(pRenderSampleBlockHandler_t handler)
 {
-    static unsigned int count = 0;
-    printf("render_sample_block %d \r\n", count);
-    count ++;
+  pRenderSampleBlock = handler;
 }

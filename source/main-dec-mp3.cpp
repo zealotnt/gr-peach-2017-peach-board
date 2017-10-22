@@ -22,6 +22,7 @@ void mp3_decoder_task(void const* pvParameters);
 
 void usbReadTask(void const* pvParameters)
 {
+    uint32_t totalSize = 0;
     player_t *player_config = (player_t *)pvParameters;
     grEnableUSB1();
     grEnableAudio();
@@ -40,16 +41,18 @@ void usbReadTask(void const* pvParameters)
         printf("open %s to write failed\r\n", file_path);
     }
 
-    printf("usbReadTask: player_config=0x%x\r\n", (uint32_t)player_config);
+    printf("usbReadTask: id=0x%x player_config=0x%x\r\n", Thread::gettid(), (uint32_t)player_config);
     while (1) {
         Thread::wait(10);
         int sizeRead = fread(buffRead, sizeof(char), 1024, fpMp3);
+        totalSize += sizeRead;
         if (sizeRead <= 0) {
             player_config->command = CMD_STOP;
+            player_config->decoder_command = CMD_STOP;
             printf("SizeRead = %d\r\n", sizeRead);
             Thread::wait(osWaitForever);
         }
-        printf("Read success: %d\r\n", sizeRead);
+        printf("Read success: %d\r\n", totalSize);
         audio_stream_consumer((char *)buffRead, sizeRead, (void *)player_config);
     }
 }
@@ -63,8 +66,8 @@ int main_dec_mp3()
     player_config.buffer_pref = BUF_PREF_SAFE;
     player_config.media_stream = (media_stream_t *)calloc(1, sizeof(media_stream_t));
 
-    Thread UsbReadTask(usbReadTask, (void *)&player_config, osPriorityAboveNormal, 1024*32);
-    Thread mp3DecoderTask(mp3_decoder_task, (void *)&player_config, osPriorityNormal, 8448*32);
+    Thread UsbReadTask(usbReadTask, (void *)&player_config, osPriorityAboveNormal, 4096*2);
+    Thread mp3DecoderTask(mp3_decoder_task, (void *)&player_config, osPriorityNormal, 8448*2);
 
     printf("Task created\r\n");
 

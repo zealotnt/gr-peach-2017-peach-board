@@ -846,6 +846,8 @@ void mad_frame_mute(struct mad_frame *);
 # ifndef LIBMAD_SYNTH_H
 # define LIBMAD_SYNTH_H
 
+typedef void (*pSetDacSampleRateHandler_t)(int rate);
+typedef void (*pRenderSampleBlockHandler_t)(short *sample_buff_ch0, short *sample_buff_ch1, int num_samples, unsigned int num_channels);
 
 struct mad_pcm {
   unsigned int samplerate;		/* sampling frequency (Hz) */
@@ -886,6 +888,9 @@ void mad_synth_init(struct mad_synth *);
 void mad_synth_mute(struct mad_synth *);
 
 void mad_synth_frame(struct mad_synth *, struct mad_frame const *);
+
+void register_set_dac_sample_rate(pSetDacSampleRateHandler_t handler);
+void register_render_sample_block(pRenderSampleBlockHandler_t handler);
 
 # endif
 

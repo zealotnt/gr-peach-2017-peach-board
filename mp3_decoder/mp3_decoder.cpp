@@ -94,13 +94,25 @@ static enum mad_flow error(void *data, struct mad_stream *stream, struct mad_fra
     return MAD_FLOW_CONTINUE;
 }
 
+static void set_dac_sample_rate(int rate)
+{
+    // mad_buffer_fmt.sample_rate = rate;
+}
+
+/* render callback for the libmad synth */
+static void render_sample_block(short *sample_buff_ch0, short *sample_buff_ch1, int num_samples, unsigned int num_channels)
+{
+    // static unsigned int count = 0;
+    // printf("SB: %d \r\n", count);
+    // count ++;
+}
 
 
 //This is the main mp3 decoding task. It will grab data from the input buffer FIFO in the SPI ram and
 //output it to the I2S port.
 void mp3_decoder_task(void const* pvParameters)
 {
-    ESP_LOGI(TAG, "mp3_decoder_task: pvParameters=0x%x", (uint32_t)pvParameters);
+    ESP_LOGI(TAG, "mp3_decoder_task: id=0x%x pvParameters=0x%x", Thread::gettid(), (uint32_t)pvParameters);
     player_t *player = (player_t *)pvParameters;
 
     int ret;
@@ -108,7 +120,11 @@ void mp3_decoder_task(void const* pvParameters)
     struct mad_frame *frame;
     struct mad_synth *synth;
 
-    Thread::wait(1000);
+    Thread::wait(3000);
+
+    register_set_dac_sample_rate(set_dac_sample_rate);
+    register_render_sample_block(render_sample_block);
+
     //Allocate structs needed for mp3 decoding
     stream = (struct mad_stream *)malloc(sizeof(struct mad_stream));
     frame = (struct mad_frame *)malloc(sizeof(struct mad_frame));
