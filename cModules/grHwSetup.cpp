@@ -97,7 +97,7 @@ bool isButtonPressed() {
             return true;
         }
     }
-    
+
     return false;
 }
 
@@ -125,6 +125,8 @@ void grEnableUSB1() {
 void grEnableAudio() {
     audio.power(0x02); // mic off
     audio.inputVolume(0.7, 0.7);
+    audio.frequency(44100);
+    audio.format(16);
 }
 
 void grSetupUsb() {

@@ -4,6 +4,9 @@
  *  Created on: 13.03.2017
  *      Author: michaelboeckling
  */
+#include "TLV320_RBSP.h"
+#include "grUtility.h"
+#include "grHwSetup.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -21,6 +24,10 @@
 #include "spiram_fifo.h"
 #include "mp3_decoder.h"
 #include "common_buffer.h"
+
+#include <string>
+#include <vector>
+#include <map>
 
 #define TAG "[mad_decoder] "
 
@@ -99,14 +106,49 @@ static void set_dac_sample_rate(int rate)
     // mad_buffer_fmt.sample_rate = rate;
 }
 
+static uint32_t audioWriteIdx = 0;
+static uint32_t buff_index = 0;
+
+static void callback_audio_write_end(void * p_data, int32_t result, void * p_app_data) {
+    if (result < 0) {
+        printf("audio write callback error %d\n", result);
+    }
+}
+
+rbsp_data_conf_t audio_write_async_ctl = {&callback_audio_write_end, NULL};
+
 /* render callback for the libmad synth */
 static void render_sample_block(short *sample_buff_ch0, short *sample_buff_ch1, int num_samples, unsigned int num_channels)
 {
-    // static unsigned int count = 0;
-    // printf("SB: %d \r\n", count);
-    // count ++;
-}
+    char *ptr_l = (char*)sample_buff_ch0;
+    char *ptr_r = (char*)sample_buff_ch1;
+    int bytes_pushed = 0;
+    for (int i = 0; i < num_samples; i++) {
+        uint8_t *p_buf = audio_write_buff[buff_index];
+        p_buf[audioWriteIdx] = ptr_l[0];
+        p_buf[audioWriteIdx+1] = ptr_l[1];
+        p_buf[audioWriteIdx+2] = ptr_r[0];
+        p_buf[audioWriteIdx+3] = ptr_r[1];
+        bytes_pushed = 4;
+        audioWriteIdx += 4;
+        if (audioWriteIdx >= AUDIO_WRITE_BUFF_SIZE) {
+            audioWriteIdx = 0;
+            grAudio()->write(p_buf, AUDIO_WRITE_BUFF_SIZE, &audio_write_async_ctl);
+            buff_index++;
+            if (buff_index >= AUDIO_WRITE_BUFF_NUM) {
+                buff_index = 0;
+            }
+        }
 
+        // DMA buffer full - retry
+        if (bytes_pushed == 0) {
+            i--;
+        } else {
+            ptr_r += 2;
+            ptr_l += 2;
+        }
+    }
+}
 
 //This is the main mp3 decoding task. It will grab data from the input buffer FIFO in the SPI ram and
 //output it to the I2S port.
