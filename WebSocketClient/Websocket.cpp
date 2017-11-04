@@ -18,8 +18,10 @@
 
 Websocket::Websocket(char * url, NetworkInterface * iface) {
     fillFields(url);
-    socket.open(iface);
-    socket.set_timeout(400);
+    socket = new TCPSocket();
+    socket->open(iface);
+    socket->set_timeout(400);
+    m_iface = iface;
 }
 
 void Websocket::fillFields(char * url) {
@@ -123,7 +125,13 @@ int Websocket::parseURL(const char* url, char* scheme, size_t maxSchemeLen, char
 bool Websocket::connect() {
     char cmd[200];
 
-    while (socket.connect(host, port) < 0) {
+    if (socket == NULL) {
+        socket = new TCPSocket();
+        socket->open(m_iface);
+        socket->set_timeout(400);
+    }
+
+    while (socket->connect(host, port) < 0) {
         ERR("Unable to connect to (%s) on port (%d)", host, port);
         wait(0.2);
         return false;
@@ -216,10 +224,20 @@ int Websocket::sendMask(char * msg) {
     return 4;
 }
 
+int Websocket::sendClose(char * reason) {
+    char msg[strlen(reason) + 15];
+    int idx = 0;
+    idx = sendOpcode(WSop_close, msg);
+    idx += sendLength(strlen(reason), msg + idx);
+    memcpy(msg+idx, reason, strlen(reason));
+    int res = write(msg, idx + strlen(reason));
+    return res;
+}
+
 int Websocket::send(char * str) {
     char msg[strlen(str) + 15];
     int idx = 0;
-    idx = sendOpcode(0x01, msg);
+    idx = sendOpcode(WSop_text, msg);
     idx += sendLength(strlen(str), msg + idx);
     idx += sendMask(msg + idx);
     memcpy(msg+idx, str, strlen(str));
@@ -227,6 +245,16 @@ int Websocket::send(char * str) {
     return res;
 }
 
+int Websocket::send(uint8_t *buff, uint32_t size) {
+    char msg[size + 15];
+    int idx = 0;
+    idx = sendOpcode(WSop_binary, msg);
+    idx += sendLength(size, msg + idx);
+    idx += sendMask(msg + idx);
+    memcpy(msg+idx, buff, size);
+    int res = write(msg, idx + size);
+    return res;
+}
 
 bool Websocket::read(char * message) {
     int i = 0;
@@ -245,13 +273,13 @@ bool Websocket::read(char * message) {
             return false;
         }
 
-        socket.set_timeout(1);
-        if (socket.recv(&opcode, 1) != 1) {
-            socket.set_timeout(2000);
+        socket->set_timeout(1);
+        if (socket->recv(&opcode, 1) != 1) {
+            socket->set_timeout(2000);
             return false;
         }
 
-        socket.set_timeout(2000);
+        socket->set_timeout(2000);
 
         if (opcode == 0x81)
             break;
@@ -301,11 +329,17 @@ bool Websocket::read(char * message) {
 
 bool Websocket::close() {
 
-    int ret = socket.close();
+    sendClose("Gr peach close conn\r\n");
+
+    int ret = socket->close();
     if (ret < 0) {
         ERR("Could not disconnect");
         return false;
     }
+
+    delete socket;
+    socket = NULL;
+
     return true;
 }
 
@@ -318,7 +352,7 @@ int Websocket::write(char * str, int len) {
     
     for (int j = 0; j < MAX_TRY_WRITE; j++) {
 
-        if ((res = socket.send(str + idx, len - idx)) < 0)
+        if ((res = socket->send(str + idx, len - idx)) < 0)
             continue;
 
         idx += res;
@@ -335,7 +369,7 @@ int Websocket::read(char * str, int len, int min_len) {
     
     for (int j = 0; j < MAX_TRY_WRITE; j++) {
 
-        if ((res = socket.recv(str + idx, len - idx)) < 0)
+        if ((res = socket->recv(str + idx, len - idx)) < 0)
           continue;
 
         idx += res;

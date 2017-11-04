@@ -63,6 +63,17 @@
  * @endcode
  */
  
+typedef enum {
+    WSop_continuation = 0x00, ///< %x0 denotes a continuation frame
+    WSop_text = 0x01,         ///< %x1 denotes a text frame
+    WSop_binary = 0x02,       ///< %x2 denotes a binary frame
+                              ///< %x3-7 are reserved for further non-control frames
+    WSop_close = 0x08,        ///< %x8 denotes a connection close
+    WSop_ping = 0x09,         ///< %x9 denotes a ping
+    WSop_pong = 0x0A          ///< %xA denotes a pong
+                              ///< %xB-F are reserved for further control frames
+} WSopcode_t;
+
 class Websocket
 {
     public:
@@ -88,6 +99,10 @@ class Websocket
         * @returns the number of bytes sent
         */
         int send(char * str);
+
+        int send(uint8_t *buff, uint32_t size);
+
+        int sendClose(char * reason);
 
         /**
         * Read a websocket message
@@ -125,10 +140,12 @@ class Websocket
         char host[32];
         char path[64];
         
-        TCPSocket socket;
+        TCPSocket *socket;
 
         int read(char * buf, int len, int min_len = -1);
         int write(char * buf, int len);
+
+        NetworkInterface * m_iface;
 };
 
 #endif
