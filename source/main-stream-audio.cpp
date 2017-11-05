@@ -98,7 +98,7 @@ static void audio_read_task(void const*) {
     audio->format(16);
     audio->power(0x00); // mic on
     audio->inputVolume(0.8, 0.8);
-    audio->frequency(44100);
+    audio->frequency(16000);
     rbsp_data_conf_t audio_read_data  = {&callback_audio_tans_end, (void *)INFO_TYPE_READ_END};
 
     while (1) {

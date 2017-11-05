@@ -220,6 +220,9 @@ bool TLV320_RBSP::frequency(int hz) {
         case 32000:
             control_setting = 0x19;
             break;
+        case 16000:
+            control_setting = 0x59;
+            break;
         case 8021:
             control_setting = 0x2F;
             break;
