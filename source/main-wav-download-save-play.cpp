@@ -58,7 +58,7 @@ int main_download_save_play() {
 
         printf("Button press\r\n");
         countTimer.start();
-        grDownloadFile(network, "file_to_write.txt", ADDRESS_SERVER);
+        grDownloadFile(network, "file_to_write.txt", ADDRESS_HTTP_SERVER);
         countTimer.stop();
         printf("Download done in %d ms, play file\r\n", countTimer.read_ms());
         countTimer.reset();

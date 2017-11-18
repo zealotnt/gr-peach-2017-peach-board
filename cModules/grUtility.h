@@ -40,7 +40,14 @@
 /*****************************************************************************/
 /* DEFINITION OF CONSTANTS                                                   */
 /*****************************************************************************/
-#define ADDRESS_SERVER      "http://192.168.1.196:8080"
+#define HTTP_PROTO              "http://"
+#define WS_PROTO                "ws://"
+#define HTTP_PORT               ":8080"
+#define WS_PORT                 ":9003"
+#define WS_PATH                 "/"
+#define IP_SERVER               "192.168.1.196"
+#define ADDRESS_HTTP_SERVER     HTTP_PROTO IP_SERVER HTTP_PORT
+#define ADDRESS_WS_SERVER       WS_PROTO IP_SERVER WS_PORT WS_PATH
 
 /*****************************************************************************/
 /* DEFINITION OF TYPES                                                       */

@@ -70,7 +70,7 @@ int main_test_node_devices() {
         printf("Node %s: relay_status = %s\r\n", DEV_1_NAME, (status1 == true) ? "on" : "off");
         printf("Node %s: relay_status = %s\r\n", DEV_2_NAME, (status2 == true) ? "on" : "off");
 
-        peachDeviceManager->PostNodeStatus(ADDRESS_SERVER);
+        peachDeviceManager->PostNodeStatus(ADDRESS_HTTP_SERVER);
 
         // if (peachDeviceManager->NodeRelayStatus(DEV_1_IP) == false) {
         //     peachDeviceManager->NodeRelayOn(DEV_1_IP);

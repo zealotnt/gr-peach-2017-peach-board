@@ -70,7 +70,7 @@ int main_upload_file_from_usb() {
 
         Thread::wait(200);
         countTimer.start();
-        grDownloadFile(network, "file_to_write.txt", ADDRESS_SERVER);
+        grDownloadFile(network, "file_to_write.txt", ADDRESS_HTTP_SERVER);
         countTimer.stop();
         printf("Download done in %d ms, play file\r\n", countTimer.read_ms());
         countTimer.reset();

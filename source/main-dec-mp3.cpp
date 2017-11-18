@@ -103,7 +103,7 @@ void httpDownloadTask(void const* pvParameters)
         // Do a GET request to wav file
         // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
         // To receive chunked response, pass in a callback as last parameter to the constructor.
-        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, ADDRESS_SERVER, on_body_cb);
+        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, ADDRESS_HTTP_SERVER, on_body_cb);
 
         HttpResponse* get_res = get_req->send();
         if (!get_res) {

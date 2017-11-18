@@ -51,7 +51,7 @@ static void callback_audio_tans_end(void * p_data, int32_t result, void * p_app_
 static void audio_stream_task(void const*) {
     NetworkInterface* network = grInitEth();
     bool isStreaming = true;
-    Websocket ws("ws://192.168.1.196:9003/", network);
+    Websocket ws(ADDRESS_WS_SERVER, network);
 
     while (1) {
         isStreaming = true;

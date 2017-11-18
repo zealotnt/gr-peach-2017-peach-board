@@ -163,7 +163,7 @@ HttpRequest *grHttpGet(NetworkInterface* network, char *end_point)
 {
     char str[200];
 
-    sprintf(str, "%s%s", ADDRESS_SERVER, end_point);
+    sprintf(str, "%s%s", ADDRESS_HTTP_SERVER, end_point);
 
     HttpRequest* get_req = new HttpRequest(network, HTTP_GET, str);
 
@@ -229,7 +229,7 @@ int grUploadFile(NetworkInterface* network, uint8_t *buff, uint32_t buffLen)
 
     printf("Start POST to server, need to send %d bytes in %d times\r\n", buffLen, packetToSend);
 
-    HttpRequest* post_req = new HttpRequest(network, HTTP_POST, ADDRESS_SERVER"/upload");
+    HttpRequest* post_req = new HttpRequest(network, HTTP_POST, ADDRESS_HTTP_SERVER"/upload");
 
     post_req->set_header("Content-Type", "multipart/form-data; boundary=123456789");
     post_req->set_header("Accept-Language", "en-US,en;q=0.5");

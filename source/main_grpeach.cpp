@@ -279,7 +279,7 @@ int main_grpeach() {
     if (peachDeviceManager->NodeStatusUpdate(DEV_2_IP, &status2) != 0) {
         printf("Can't update %s status\r\n", DEV_2_NAME);
     }
-    peachDeviceManager->PostNodeStatus(ADDRESS_SERVER);
+    peachDeviceManager->PostNodeStatus(ADDRESS_HTTP_SERVER);
 
     Thread audioReadTask(audio_read_task, NULL, osPriorityNormal, 1024*32);
 
@@ -337,7 +337,7 @@ int main_grpeach() {
         // Download and play file audio
         Thread::wait(200);
         countTimer.start();
-        grDownloadFile(network, "file_to_write.txt", ADDRESS_SERVER);
+        grDownloadFile(network, "file_to_write.txt", ADDRESS_HTTP_SERVER);
         countTimer.stop();
         printf("Download done in %d ms, play file\r\n", countTimer.read_ms());
         countTimer.reset();

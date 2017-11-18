@@ -65,7 +65,7 @@ int main_http() {
             // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
             // To receive chunked response, pass in a callback as last parameter to the constructor.
             // HttpRequest* get_req = new HttpRequest(network, HTTP_GET, "http://esp8266-8109ea.local", on_body_cb);
-            HttpRequest* get_req = new HttpRequest(network, HTTP_GET, ADDRESS_SERVER, on_body_cb);
+            HttpRequest* get_req = new HttpRequest(network, HTTP_GET, ADDRESS_HTTP_SERVER, on_body_cb);
 
             HttpResponse* get_res = get_req->send();
             if (!get_res) {
@@ -87,7 +87,7 @@ int main_http() {
 
         waitShortPress();
         {
-            HttpRequest* post_req = new HttpRequest(network, HTTP_POST, ADDRESS_SERVER "/status/update");
+            HttpRequest* post_req = new HttpRequest(network, HTTP_POST, ADDRESS_HTTP_SERVER "/status/update");
             post_req->set_header("Content-Type", "application/json");
 
             const char body[] = "{\"hello\":\"world\"}";
