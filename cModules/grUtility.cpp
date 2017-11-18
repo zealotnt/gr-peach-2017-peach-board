@@ -171,7 +171,6 @@ HttpRequest *grHttpGet(NetworkInterface* network, char *end_point)
     if (!get_res) {
         printf("HttpRequest failed (error code %d)\n", get_req->get_error());
         delete get_req;
-        free(str);
         return NULL;
     }
     // printf("\n----- HTTP GET response -----\n");
@@ -179,6 +178,22 @@ HttpRequest *grHttpGet(NetworkInterface* network, char *end_point)
     // printf("\n----- END HTTP GET response -----\n");
 
     return get_req;
+}
+
+bool grHttpGet(NetworkInterface* network, char *end_point, char *body, uint32_t buffSize)
+{
+    HttpRequest *end_req = grHttpGet(network, end_point);
+    if (end_req == NULL) {
+        return false;
+    }
+
+    HttpResponse* response = end_req->getLastResponse();
+
+    // TODO: check if body return bigger than buffSize -> trim the body and report to caller
+    strcpy(body, response->get_body_as_string().c_str());
+
+    delete end_req;
+    return true;
 }
 
 int grStartUpload(NetworkInterface* network)

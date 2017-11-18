@@ -42,6 +42,7 @@ int main_sound_record_play_echo();
 int main_dec_mp3_usb();
 int main_dec_mp3_http();
 int main_stream_audio();
+int main_gr_robot();
 
 int main() {
     // return main_http();
@@ -58,5 +59,6 @@ int main() {
     // return main_dec_mp3();
     // return main_dec_mp3_http();
     // return main_grpeach();
-    return main_stream_audio();
+    // return main_stream_audio();
+    return main_gr_robot();
 }

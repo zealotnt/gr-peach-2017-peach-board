@@ -57,7 +57,7 @@
 /*****************************************************************************/
 /* DEFINITION OF MACROS                                                      */
 /*****************************************************************************/
-
+#define ARRAY_LEN(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
 
 /*****************************************************************************/
 /* DECLARATION OF VARIABLES (Only external global variables)                 */
@@ -74,6 +74,7 @@ void waitShortPress();
 HttpRequest *grHttpPost(NetworkInterface *network, char *address, char *body);
 HttpRequest *grHttpPostJson(NetworkInterface *network, char *address, char *body);
 HttpRequest *grHttpGet(NetworkInterface* network, char *end_point);
+bool grHttpGet(NetworkInterface* network, char *end_point, char *body, uint32_t buffSize);
 
 int grStartUpload(NetworkInterface* network);
 int grEndUpload(NetworkInterface* network);

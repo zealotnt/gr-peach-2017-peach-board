@@ -105,13 +105,25 @@ bool isButtonRelease() {
     return (button.read() == 1);
 }
 
+Mutex networkInitMutex;
 NetworkInterface *grInitEth() {
     // Connect to the network (see mbed_app.json for the connectivity method used)
-    NetworkInterface* network = easy_connect(true);
+    static NetworkInterface* network = NULL;
+
+    networkInitMutex.lock();
+
+    if (network != NULL) {
+        networkInitMutex.unlock();
+        return network;
+    }
+
+    network = easy_connect(true);
     if (!network) {
+        networkInitMutex.unlock();
         printf("Cannot connect to the network, see serial output");
         return NULL;
     }
+    networkInitMutex.unlock();
     return network;
 }
 
