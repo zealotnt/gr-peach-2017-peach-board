@@ -65,10 +65,10 @@ static void audio_stream_task(void const*) {
 
         while (isStreaming) {
             osEvent evt = mail_box.get();
-
             mail_t *mail = (mail_t *)evt.value.p;
 
             int error_c = ws.send((uint8_t*)mail->p_data, mail->result);
+            mail_box.free(mail);
             if (error_c == -1) {
                 DBG_INFO("error when sending\r\n");
                 Thread::wait(500);
@@ -76,8 +76,6 @@ static void audio_stream_task(void const*) {
                 isStreaming = false;
                 break;
             }
-
-            mail_box.free(mail);
 
             if (isButtonPressed()) {
                 DBG_INFO("Button pressed, close socket and stream again\r\n");
