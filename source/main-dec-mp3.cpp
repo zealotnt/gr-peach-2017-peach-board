@@ -17,6 +17,10 @@
 #include "spiram_fifo.h"
 
 player_t *pPlayerConfig;
+player_t gPlayer_Config;
+
+#define TAG "[mp3-feeder] "
+#define LOGI(tag, ...)                           printf(tag); printf(__VA_ARGS__); printf("\r\n");
 
 extern int audio_stream_consumer(const char *recv_buf, ssize_t bytes_read,
         void *user_data);
@@ -40,10 +44,10 @@ void usbReadTask(void const* pvParameters)
     strcat(file_path, "NoiNayCoAnh.mp3");
     fpMp3 = fopen(file_path, "r");
     if (fpMp3 == NULL) {
-        printf("open %s to write failed\r\n", file_path);
+        LOGI(TAG, "open %s to write failed", file_path);
     }
 
-    printf("usbReadTask: id=0x%x player_config=0x%x\r\n", Thread::gettid(), (uint32_t)player_config);
+    LOGI(TAG, "usbReadTask: id=0x%x player_config=0x%x", Thread::gettid(), (uint32_t)player_config);
     while (1) {
         Thread::wait(10);
         int sizeRead = fread(buffRead, sizeof(char), 1024, fpMp3);
@@ -51,33 +55,12 @@ void usbReadTask(void const* pvParameters)
         if (sizeRead <= 0) {
             player_config->command = CMD_STOP;
             player_config->decoder_command = CMD_STOP;
-            printf("SizeRead = %d\r\n", sizeRead);
+            LOGI(TAG, "SizeRead = %d", sizeRead);
             Thread::wait(osWaitForever);
         }
-        printf("Read success: %d\r\n", totalSize);
+        LOGI(TAG, "Read success: %d", totalSize);
         audio_stream_consumer((char *)buffRead, sizeRead, (void *)player_config);
     }
-}
-
-int main_dec_mp3_usb()
-{
-    player_t player_config;
-    player_config.command = CMD_START;
-    player_config.decoder_status = INITIALIZED;
-    player_config.decoder_command = CMD_START;
-    player_config.buffer_pref = BUF_PREF_SAFE;
-    player_config.media_stream = (media_stream_t *)calloc(1, sizeof(media_stream_t));
-
-    Thread UsbReadTask(usbReadTask, (void *)&player_config, osPriorityAboveNormal, 4096*2);
-    Thread mp3DecoderTask(mp3_decoder_task, (void *)&player_config, osPriorityNormal, 8448*2);
-
-    printf("Task created\r\n");
-
-    while (true) {
-        Thread::wait(osWaitForever);
-    }
-
-    return 0;
 }
 
 static void on_body_cb(const char *at, size_t length)
@@ -85,17 +68,15 @@ static void on_body_cb(const char *at, size_t length)
     audio_stream_consumer((char *)at, length, (void *)pPlayerConfig);
 }
 
-void httpDownloadTask(void const* pvParameters)
+void http_download_task(void const* pvParameters)
 {
     uint32_t totalSize = 0;
     player_t *player_config = (player_t *)pvParameters;
     pPlayerConfig = player_config;
-    grEnableUSB1();
     grEnableAudio();
-    grSetupUsb();
     NetworkInterface* network = grInitEth();
 
-    printf("httpDownloadTask: id=0x%x player_config=0x%x\r\n",
+    LOGI(TAG, "httpDownloadTask: id=0x%x player_config=0x%x",
         Thread::gettid(),
         (uint32_t)player_config);
 
@@ -103,35 +84,82 @@ void httpDownloadTask(void const* pvParameters)
         // Do a GET request to wav file
         // By default the body is automatically parsed and stored in a buffer, this is memory heavy.
         // To receive chunked response, pass in a callback as last parameter to the constructor.
-        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, ADDRESS_HTTP_SERVER, on_body_cb);
+        HttpRequest* get_req = new HttpRequest(network, HTTP_GET, ADDRESS_HTTP_SERVER "/audio", on_body_cb);
 
         HttpResponse* get_res = get_req->send();
         if (!get_res) {
-            printf("HttpRequest failed (error code %d)\n", get_req->get_error());
-            delete get_req;
+            LOGI(TAG, "HttpRequest failed (error code %d)", get_req->get_error());
         }
-        printf("\n----- HTTP GET response -----\n");
         delete get_req;
+        while (spiRamFifoFill() != 0)
+        {
+            Thread::wait(50);
+        }
+        Thread::wait(100);
+        player_config->command = CMD_STOP;
+        player_config->decoder_command = CMD_STOP;
     }
+    LOGI(TAG, "http downloader stopped");
 }
 
-int main_dec_mp3_http()
+void initPlayerConfig()
 {
-    player_t player_config;
-    player_config.command = CMD_START;
-    player_config.decoder_status = INITIALIZED;
-    player_config.decoder_command = CMD_START;
-    player_config.buffer_pref = BUF_PREF_SAFE;
-    player_config.media_stream = (media_stream_t *)calloc(1, sizeof(media_stream_t));
+    gPlayer_Config.media_stream = (media_stream_t *)calloc(1, sizeof(media_stream_t));
+}
 
-    Thread HttpDownloadTask(httpDownloadTask, (void *)&player_config, osPriorityAboveNormal, 4096*2);
-    Thread mp3DecoderTask(mp3_decoder_task, (void *)&player_config, osPriorityNormal, 8448*2);
+void preparePlayerConfig()
+{
+    gPlayer_Config.command = CMD_START;
+    gPlayer_Config.decoder_status = INITIALIZED;
+    gPlayer_Config.decoder_command = CMD_START;
+    gPlayer_Config.buffer_pref = BUF_PREF_SAFE;
+}
 
-    printf("Task created\r\n");
+void grRobot_mp3_player()
+{
+    #define TAG "[grRobot_mp3_player] "
+    LOGI(TAG, "Task creating");
+    preparePlayerConfig();
+    Thread httpDownloadTask(http_download_task, (void *)&gPlayer_Config, osPriorityAboveNormal, 4096*2);
+    Thread mp3DecoderTask(mp3_decoder_task, (void *)&gPlayer_Config, osPriorityNormal, 8448*2);
+    LOGI(TAG, "Task created");
+    mp3DecoderTask.join();
+    httpDownloadTask.join();
+    LOGI(TAG, "Done playing");
+    #undef TAG
+}
+
+int main_dec_mp3_usb()
+{
+    #define TAG "[main_dec_mp3_usb] "
+    initPlayerConfig();
+    preparePlayerConfig();
+
+    Thread UsbReadTask(usbReadTask, (void *)&gPlayer_Config, osPriorityAboveNormal, 4096*2);
+    Thread mp3DecoderTask(mp3_decoder_task, (void *)&gPlayer_Config, osPriorityNormal, 8448*2);
+
+    LOGI(TAG, "Task created");
 
     while (true) {
         Thread::wait(osWaitForever);
     }
+    #undef TAG
 
+    return 0;
+}
+
+int main_dec_mp3_http()
+{
+    #define TAG "[main_dec_mp3_http] "
+    int playedTimes = 0;
+
+    initPlayerConfig();
+
+    while (true) {
+        grRobot_mp3_player();
+        playedTimes ++;
+        LOGI(TAG, "Done play %d times", playedTimes);
+    }
+    #undef TAG
     return 0;
 }
