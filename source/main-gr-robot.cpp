@@ -161,7 +161,8 @@ int main_gr_robot() {
                     switch (i)
                     {
                         case ACTION_IDLE:
-                            // restart the websocket streaming
+                            // restart the websocket streaming and recording
+                            grRobot_audioEnableRead();
                             audioStreamTask.signal_set(0x1);
                             grRobot_SetLedIdle();
                             break;
@@ -194,6 +195,8 @@ int main_gr_robot() {
                             break;
 
                         case ACTION_PLAY_AUDIO:
+                            grRobot_audioDisableRead();
+
                             // set led playing audio
                             grRobot_SetLedPlaying();
 
@@ -203,6 +206,7 @@ int main_gr_robot() {
                             // start the mp3 downloader, decoder and player
                             grRobot_mp3_player();
                             notifyMain_websocketClose(0);
+                            printHeadStat();
                             break;
 
                         default:

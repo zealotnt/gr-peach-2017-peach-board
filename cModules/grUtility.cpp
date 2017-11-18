@@ -184,6 +184,7 @@ bool grHttpGet(NetworkInterface* network, char *end_point, char *body, uint32_t 
 {
     HttpRequest *end_req = grHttpGet(network, end_point);
     if (end_req == NULL) {
+        delete end_req;
         return false;
     }
 
@@ -327,4 +328,12 @@ int grReadFile(char *filePath, uint8_t **fileVal, uint32_t *fileLen)
         fclose(fp);
     return ret;
 }
+
+void printHeadStat() {
+    mbed_stats_heap_t heap_stats;
+    mbed_stats_heap_get(&heap_stats);
+    printf("Current heap: %lu\r\n", heap_stats.current_size);
+    printf("Max heap size: %lu\r\n", heap_stats.max_size);
+}
+
 /************************* End of File ****************************************/

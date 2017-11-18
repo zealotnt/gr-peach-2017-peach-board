@@ -10,5 +10,7 @@
 
 void grRobot_audio_stream_task(void const*);
 void grRobot_audio_read_task(void const*);
+void grRobot_audioDisableRead();
+void grRobot_audioEnableRead();
 
 #endif /* SOURCE_GR_ROBOT_GR_ROBOT_AUDIO_UPSTREAM_HPP_ */

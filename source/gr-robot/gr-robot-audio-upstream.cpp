@@ -29,16 +29,17 @@
 #define MODULE_PREFIX           "[WS] "
 #define DBG_INFO(...)           printf(MODULE_PREFIX); printf(__VA_ARGS__)
 
-//4 bytes aligned! No cache memory
-static uint8_t audio_read_buff[READ_BUFF_NUM][READ_BUFF_SIZE] __attribute((section("NC_BSS"),aligned(4)));
-
 typedef struct {
     uint32_t info_type;
     void *   p_data;
     int32_t  result;
 } mail_t;
-extern Mail<mail_t, MAIL_QUEUE_SIZE> mail_box;
 
+//4 bytes aligned! No cache memory
+static uint8_t audio_read_buff[READ_BUFF_NUM][READ_BUFF_SIZE] __attribute((section("NC_BSS"),aligned(4)));
+static bool isEnableRead = true;
+static bool isReallyDisable = false;
+extern Mail<mail_t, MAIL_QUEUE_SIZE> mail_box;
 extern void notifyMain_websocketClose(uint32_t reasonId);
 
 static void callback_audio_tans_end(void * p_data, int32_t result, void * p_app_data) {
@@ -91,6 +92,26 @@ void grRobot_audio_stream_task(void const*) {
     }
 }
 
+void grRobot_audioDisableRead()
+{
+    isEnableRead = false;
+    while (isReallyDisable == false) {
+        Thread::wait(10);
+    }
+}
+
+void grRobot_audioEnableRead()
+{
+    TLV320_RBSP *audio = grAudio();
+    // Microphone
+    audio->mic(true);   // Input select for ADC is microphone.
+    audio->format(16);
+    audio->power(0x00); // mic on
+    audio->inputVolume(0.8, 0.8);
+    audio->frequency(16000);
+    isEnableRead = true;
+}
+
 void grRobot_audio_read_task(void const*) {
     uint32_t cnt;
     grEnableAudio();
@@ -104,7 +125,13 @@ void grRobot_audio_read_task(void const*) {
     rbsp_data_conf_t audio_read_data  = {&callback_audio_tans_end, (void *)INFO_TYPE_READ_END};
 
     while (1) {
-        for (cnt = 0; cnt < READ_BUFF_NUM; cnt++) {
+        if (isEnableRead == false) {
+            isReallyDisable = true;
+            Thread::wait(100);
+        }
+
+        isReallyDisable = false;
+        for (cnt = 0; cnt < READ_BUFF_NUM && isEnableRead == true; cnt++) {
             if (audio->read(audio_read_buff[cnt], READ_BUFF_SIZE, &audio_read_data) < 0) {
                 DBG_INFO("read error\n");
             }

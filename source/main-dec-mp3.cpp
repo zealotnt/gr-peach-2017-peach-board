@@ -90,7 +90,6 @@ void http_download_task(void const* pvParameters)
         if (!get_res) {
             LOGI(TAG, "HttpRequest failed (error code %d)", get_req->get_error());
         }
-        delete get_req;
         while (spiRamFifoFill() != 0)
         {
             Thread::wait(50);
@@ -98,6 +97,7 @@ void http_download_task(void const* pvParameters)
         Thread::wait(100);
         player_config->command = CMD_STOP;
         player_config->decoder_command = CMD_STOP;
+        delete get_req;
     }
     LOGI(TAG, "http downloader stopped");
 }
@@ -115,16 +115,31 @@ void preparePlayerConfig()
     gPlayer_Config.buffer_pref = BUF_PREF_SAFE;
 }
 
+#define HTTP_DOWNLOAD_STACK_SIZE            4096*2
+#define MP3_DECODER_STACK_SIZE              8448*2
+uint8_t httpDownloadTaskStk[HTTP_DOWNLOAD_STACK_SIZE];
+uint8_t mp3DecoderStk[MP3_DECODER_STACK_SIZE];
+
 void grRobot_mp3_player()
 {
     #define TAG "[grRobot_mp3_player] "
     LOGI(TAG, "Task creating");
     preparePlayerConfig();
-    Thread httpDownloadTask(http_download_task, (void *)&gPlayer_Config, osPriorityAboveNormal, 4096*2);
-    Thread mp3DecoderTask(mp3_decoder_task, (void *)&gPlayer_Config, osPriorityNormal, 8448*2);
+    Thread httpDownloadTask(http_download_task,
+                            (void *)&gPlayer_Config,
+                            osPriorityAboveNormal,
+                            HTTP_DOWNLOAD_STACK_SIZE,
+                            httpDownloadTaskStk);
+    Thread mp3DecoderTask(mp3_decoder_task,
+                          (void *)&gPlayer_Config,
+                          osPriorityNormal,
+                          MP3_DECODER_STACK_SIZE,
+                          mp3DecoderStk);
     LOGI(TAG, "Task created");
     mp3DecoderTask.join();
+    mp3DecoderTask.terminate();
     httpDownloadTask.join();
+    httpDownloadTask.terminate();
     LOGI(TAG, "Done playing");
     #undef TAG
 }
