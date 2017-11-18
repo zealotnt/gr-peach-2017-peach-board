@@ -12,112 +12,166 @@
 #include "cNodeManager.h"
 #include "Websocket.h"
 #include <string>
+#include "gr-robot/gr-robot-led.hpp"
+#include "gr-robot/gr-robot-audio-upstream.hpp"
 
-#define WRITE_BUFF_NUM         (16)
-#define READ_BUFF_SIZE         (4096)
-#define READ_BUFF_NUM          (16)
-#define MAIL_QUEUE_SIZE        (WRITE_BUFF_NUM + READ_BUFF_NUM + 1)
-#define INFO_TYPE_WRITE_END    (0)
-#define INFO_TYPE_READ_END     (1)
 #define DBG_INFO(...)           printf(__VA_ARGS__)
+#define SYS_MAIL_PARAM_NUM      (1)     /* Elements number of mail parameter array */
+#define MAIL_QUEUE_SIZE         4
 
-//4 bytes aligned! No cache memory
-static uint8_t audio_read_buff[READ_BUFF_NUM][READ_BUFF_SIZE] __attribute((section("NC_BSS"),aligned(4)));
+typedef enum {
+    SYS_MAILID_DUMMY = 0,
+    SYS_MAIL_WS_CLOSE,         /* Notifies main thread websocket closing. */
+    SYS_MAILID_NUM
+} SYS_MAIL_ID;
 
 typedef struct {
-    uint32_t info_type;
-    void *   p_data;
-    int32_t  result;
-} mail_t;
-extern Mail<mail_t, MAIL_QUEUE_SIZE> mail_box;
+    SYS_MAIL_ID     mail_id;
+    uint32_t        param[SYS_MAIL_PARAM_NUM];
+} sys_mail_t;
+static Mail<sys_mail_t, MAIL_QUEUE_SIZE> sysMailBox;
 
-static void callback_audio_tans_end(void * p_data, int32_t result, void * p_app_data) {
-    mail_t *mail = mail_box.alloc();
+void notifyMain_websocketClose(uint32_t reasonId);
 
-    if (result < 0) {
-        return;
+typedef struct
+{
+    char valueAction[20];
+} serverJsonResp_t;
+
+bool parseActionJson(char* body, serverJsonResp_t *resp)
+{
+    Json json (body, strlen (body));
+    char valueAction[20] = "";
+    char *keyAction = "action";
+
+    if(!json.isValidJson())
+    {
+        DBG_INFO("Json invalid!\n");
+        return NULL;
     }
-    if (mail == NULL) {
-        // consumer not consume fast enough, report error
-        return;
+
+    int actionIdx = json.findKeyIndexIn ( keyAction , 0 );
+    if ( actionIdx == -1 )
+    {
+        // Error handling part ...
+        DBG_INFO("\"%s\" does not exist ... return!!",keyAction);
+        return NULL;
+    }
+    // Find the first child index of key-node "city"
+    int valueIndex = json.findChildIndexOf ( actionIdx, -1 );
+    if ( valueIndex > 0 )
+    {
+        const char * valueStart  = json.tokenAddress ( valueIndex );
+        int          valueLength = json.tokenLength ( valueIndex );
+        strncpy ( resp->valueAction, valueStart, valueLength );
+        resp->valueAction [valueLength] = 0; // NULL-terminate the string
     }
 
-    mail->info_type = (uint32_t)p_app_data;
-    mail->p_data    = p_data;
-    mail->result    = result;
-    mail_box.put(mail);
+    return true;
 }
 
-static void audio_stream_task(void const*) {
-    NetworkInterface* network = grInitEth();
-    bool isStreaming = true;
-    Websocket ws(ADDRESS_WS_SERVER, network);
+static bool send_sys_mail(const SYS_MAIL_ID mail_id, const uint32_t param0)
+{
+    bool            ret = false;
+    osStatus        stat;
+    sys_mail_t      * const p_mail = sysMailBox.alloc();
 
-    while (1) {
-        isStreaming = true;
-        DBG_INFO("Trying to connect\r\n");
-        int connect_error = ws.connect();
-        if (!connect_error) {
-            DBG_INFO("error connecting to server\r\n");
-            Thread::wait(500);
-            continue;
-        }
-
-        while (isStreaming) {
-            osEvent evt = mail_box.get();
-            mail_t *mail = (mail_t *)evt.value.p;
-
-            int error_c = ws.send((uint8_t*)mail->p_data, mail->result);
-            mail_box.free(mail);
-            if (error_c == -1) {
-                DBG_INFO("error when sending\r\n");
-                Thread::wait(500);
-                ws.close();
-                isStreaming = false;
-                break;
-            }
-
-            if (isButtonPressed()) {
-                DBG_INFO("Button pressed, close socket and stream again\r\n");
-                ws.close();
-                isStreaming = false;
-                break;
-            }
+    if (p_mail != NULL) {
+        p_mail->mail_id = mail_id;
+        p_mail->param[0] = param0;
+        stat = sysMailBox.put(p_mail);
+        if (stat == osOK) {
+            ret = true;
+        } else {
+            (void) sysMailBox.free(p_mail);
         }
     }
+    return ret;
 }
 
-static void audio_read_task(void const*) {
-    uint32_t cnt;
-    grEnableAudio();
-    TLV320_RBSP *audio = grAudio();
-    // Microphone
-    audio->mic(true);   // Input select for ADC is microphone.
-    audio->format(16);
-    audio->power(0x00); // mic on
-    audio->inputVolume(0.8, 0.8);
-    audio->frequency(16000);
-    rbsp_data_conf_t audio_read_data  = {&callback_audio_tans_end, (void *)INFO_TYPE_READ_END};
+static bool sysRecvMail(SYS_MAIL_ID * const p_mail_id, uint32_t * const p_param0)
+{
+    bool            ret = false;
+    osEvent         evt;
+    sys_mail_t      *p_mail;
 
-    while (1) {
-        for (cnt = 0; cnt < READ_BUFF_NUM; cnt++) {
-            if (audio->read(audio_read_buff[cnt], READ_BUFF_SIZE, &audio_read_data) < 0) {
-                DBG_INFO("read error\n");
+    if ((p_mail_id != NULL) && (p_param0 != NULL)) {
+        evt = sysMailBox.get(osWaitForever);
+        if (evt.status == osEventMail) {
+            p_mail = (sys_mail_t *)evt.value.p;
+            if (p_mail != NULL) {
+                *p_mail_id = p_mail->mail_id;
+                *p_param0 = p_mail->param[0];
+                ret = true;
             }
+            (void) sysMailBox.free(p_mail);
         }
     }
+    return ret;
+}
+
+void notifyMain_websocketClose(uint32_t reasonId)
+{
+    send_sys_mail(SYS_MAIL_WS_CLOSE, reasonId);
 }
 
 int main_gr_robot() {
     NetworkInterface* network = grInitEth();
-    char serverResp[1024];
+    char serverRespStr[1024];
+    serverJsonResp_t serverResParsed;
+    const char actionCmdStr[][20] = {
+        "done-wake-word",
+        "stream-cmd",
+        "do-action"
+        "play-audio",
+    };
+    Thread audioReadTask(grRobot_audio_read_task, NULL, osPriorityNormal, 1024*32);
+    Thread audioStreamTask(grRobot_audio_stream_task, NULL, osPriorityNormal, 1024*32);
+    Thread ledBlinkTask(grRobot_led_blinker_task, NULL, osPriorityNormal, 512*32);
 
-//    Thread audioReadTask(audio_read_task, NULL, osPriorityNormal, 1024*32);
-//    Thread audioStreamTask(audio_stream_task, NULL, osPriorityNormal, 1024*32);
-
+//    audioStreamTask.signal_set(0x1);
     while(1) {
-        if (grHttpGet(network, "/", serverResp, sizeof(serverResp)) != false) {
-            printf("Get: %s\r\n", serverResp);
+        SYS_MAIL_ID mailId;
+        uint32_t mailParams[SYS_MAIL_PARAM_NUM];
+        sysRecvMail(&mailId, &mailParams[0]);
+
+        // currently there is only notify ws close, so no need to parse the mail
+        // ask the server what to do next
+        if (grHttpGet(network, "/", serverRespStr, sizeof(serverRespStr)) != false) {
+            printf("Get: %s\r\n", serverRespStr);
+            parseActionJson(serverRespStr, &serverResParsed);
+            for (int i = 0; i < ARRAY_LEN(actionCmdStr); i++) {
+                if (strcmp(serverResParsed.valueAction, actionCmdStr[i]) == 0) {
+                    printf("Get cmd idx=%d\r\n", i);
+                    switch (i)
+                    {
+                        case 0:
+                            // done wake-word, print led
+
+                            // streaming command, print led
+
+                            // restart the websocket streaming
+                            audioStreamTask.signal_set(0x1);
+
+
+                            break;
+                        case 1:
+                            // streaming command, print led
+
+                            // make sure the streaming thread working
+                            audioStreamTask.signal_set(0x1);
+
+                            break;
+                        case 2:
+                            // stop the streaming
+
+                            // start the mp3 downloader, decoder and player
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
         }
         Thread::wait(500);
     }
