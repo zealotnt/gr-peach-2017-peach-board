@@ -98,7 +98,7 @@ void ledPlayingSound()
 
     for (int i = 0; i < ARRAY_LEN(colorList); i++) {
         ledSet(colorList[i]);
-        Thread::wait(250);
+        Thread::wait(50);
     }
 }
 

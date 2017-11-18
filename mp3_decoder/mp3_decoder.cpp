@@ -162,8 +162,6 @@ void mp3_decoder_task(void const* pvParameters)
     struct mad_frame *frame;
     struct mad_synth *synth;
 
-    Thread::wait(3000);
-
     register_set_dac_sample_rate(set_dac_sample_rate);
     register_render_sample_block(render_sample_block);
 

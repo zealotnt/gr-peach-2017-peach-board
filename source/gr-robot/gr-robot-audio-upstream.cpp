@@ -82,17 +82,8 @@ void grRobot_audio_stream_task(void const*) {
             int error_c = ws.send((uint8_t*)mail->p_data, mail->result);
             mail_box.free(mail);
             if (error_c == -1) {
+                ws.close();
                 notifyMain_websocketClose(0);
-                DBG_INFO("\r\n");
-                Thread::wait(500);
-                ws.close();
-                isStreaming = false;
-                break;
-            }
-
-            if (isButtonPressed()) {
-                DBG_INFO("Button pressed, close socket and stream again\r\n");
-                ws.close();
                 isStreaming = false;
                 break;
             }

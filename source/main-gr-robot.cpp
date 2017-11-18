@@ -32,12 +32,14 @@ typedef struct {
 } sys_mail_t;
 static Mail<sys_mail_t, MAIL_QUEUE_SIZE> sysMailBox;
 
-void notifyMain_websocketClose(uint32_t reasonId);
-
 typedef struct
 {
     char valueAction[40];
 } serverJsonResp_t;
+
+extern void initPlayerConfig();
+extern void grRobot_mp3_player();
+void notifyMain_websocketClose(uint32_t reasonId);
 
 bool parseActionJson(char* body, serverJsonResp_t *resp)
 {
@@ -126,6 +128,8 @@ typedef enum
 
 int main_gr_robot() {
     NetworkInterface* network = grInitEth();
+    initPlayerConfig();
+
     char serverRespStr[1024];
     serverJsonResp_t serverResParsed;
     const char actionCmdStr[][40] = {
@@ -152,7 +156,6 @@ int main_gr_robot() {
             DBG_INFO("Get: %s\r\n", serverRespStr);
             parseActionJson(serverRespStr, &serverResParsed);
             for (int i = 0; i < ARRAY_LEN(actionCmdStr); i++) {
-                DBG_INFO("wtf %s %d\r\n", serverResParsed.valueAction, i);
                 if (strcmp(serverResParsed.valueAction, actionCmdStr[i]) == 0) {
                     DBG_INFO("Get cmd idx=%d\r\n", i);
                     switch (i)
@@ -198,6 +201,8 @@ int main_gr_robot() {
                             audioStreamTask.signal_clr(0x1);
 
                             // start the mp3 downloader, decoder and player
+                            grRobot_mp3_player();
+                            notifyMain_websocketClose(0);
                             break;
 
                         default:
