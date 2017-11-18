@@ -15,7 +15,8 @@
 #include "gr-robot/gr-robot-led.hpp"
 #include "gr-robot/gr-robot-audio-upstream.hpp"
 
-#define DBG_INFO(...)           printf(__VA_ARGS__)
+#define MODULE_PREFIX           "[MAIN] "
+#define DBG_INFO(...)           printf(MODULE_PREFIX); printf(__VA_ARGS__)
 #define SYS_MAIL_PARAM_NUM      (1)     /* Elements number of mail parameter array */
 #define MAIL_QUEUE_SIZE         4
 
@@ -35,13 +36,12 @@ void notifyMain_websocketClose(uint32_t reasonId);
 
 typedef struct
 {
-    char valueAction[20];
+    char valueAction[40];
 } serverJsonResp_t;
 
 bool parseActionJson(char* body, serverJsonResp_t *resp)
 {
     Json json (body, strlen (body));
-    char valueAction[20] = "";
     char *keyAction = "action";
 
     if(!json.isValidJson())
@@ -115,21 +115,32 @@ void notifyMain_websocketClose(uint32_t reasonId)
     send_sys_mail(SYS_MAIL_WS_CLOSE, reasonId);
 }
 
+typedef enum
+{
+    ACTION_IDLE = 0x00,
+    ACTION_DONE_WW,
+    ACTION_STREAM_CMD,
+    ACTION_DO_ACTION,
+    ACTION_PLAY_AUDIO,
+} actionType_t;
+
 int main_gr_robot() {
     NetworkInterface* network = grInitEth();
     char serverRespStr[1024];
     serverJsonResp_t serverResParsed;
-    const char actionCmdStr[][20] = {
+    const char actionCmdStr[][40] = {
+        "idle",
         "done-wake-word",
         "stream-cmd",
-        "do-action"
+        "do-action",
         "play-audio",
+        ""
     };
     Thread audioReadTask(grRobot_audio_read_task, NULL, osPriorityNormal, 1024*32);
     Thread audioStreamTask(grRobot_audio_stream_task, NULL, osPriorityNormal, 1024*32);
     Thread ledBlinkTask(grRobot_led_blinker_task, NULL, osPriorityNormal, 512*32);
 
-//    audioStreamTask.signal_set(0x1);
+    audioStreamTask.signal_set(0x1);
     while(1) {
         SYS_MAIL_ID mailId;
         uint32_t mailParams[SYS_MAIL_PARAM_NUM];
@@ -138,35 +149,57 @@ int main_gr_robot() {
         // currently there is only notify ws close, so no need to parse the mail
         // ask the server what to do next
         if (grHttpGet(network, "/", serverRespStr, sizeof(serverRespStr)) != false) {
-            printf("Get: %s\r\n", serverRespStr);
+            DBG_INFO("Get: %s\r\n", serverRespStr);
             parseActionJson(serverRespStr, &serverResParsed);
             for (int i = 0; i < ARRAY_LEN(actionCmdStr); i++) {
+                DBG_INFO("wtf %s %d\r\n", serverResParsed.valueAction, i);
                 if (strcmp(serverResParsed.valueAction, actionCmdStr[i]) == 0) {
-                    printf("Get cmd idx=%d\r\n", i);
+                    DBG_INFO("Get cmd idx=%d\r\n", i);
                     switch (i)
                     {
-                        case 0:
-                            // done wake-word, print led
-
-                            // streaming command, print led
-
+                        case ACTION_IDLE:
                             // restart the websocket streaming
                             audioStreamTask.signal_set(0x1);
-
-
+                            grRobot_SetLedIdle();
                             break;
-                        case 1:
+
+                        case ACTION_DONE_WW:
+                            // done wake-word, print led
+                            grRobot_SetLedWwDetected();
+
                             // streaming command, print led
+                            grRobot_SetLedRecording();
+
+                            // websocket streaming voice command
+                            audioStreamTask.signal_set(0x1);
+                            break;
+
+                        case ACTION_STREAM_CMD:
+                            // streaming command, print led
+                            grRobot_SetLedRecording();
 
                             // make sure the streaming thread working
                             audioStreamTask.signal_set(0x1);
+                            break;
+
+                        case ACTION_DO_ACTION:
+                            // stop the streaming
+                            audioStreamTask.signal_clr(0x1);
+
+                            // do action
 
                             break;
-                        case 2:
+
+                        case ACTION_PLAY_AUDIO:
+                            // set led playing audio
+                            grRobot_SetLedPlaying();
+
                             // stop the streaming
+                            audioStreamTask.signal_clr(0x1);
 
                             // start the mp3 downloader, decoder and player
                             break;
+
                         default:
                             break;
                     }

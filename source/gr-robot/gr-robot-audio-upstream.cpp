@@ -26,7 +26,8 @@
 #define MAIL_QUEUE_SIZE        (WRITE_BUFF_NUM + READ_BUFF_NUM + 1)
 #define INFO_TYPE_WRITE_END    (0)
 #define INFO_TYPE_READ_END     (1)
-#define DBG_INFO(...)           printf(__VA_ARGS__)
+#define MODULE_PREFIX           "[WS] "
+#define DBG_INFO(...)           printf(MODULE_PREFIX); printf(__VA_ARGS__)
 
 //4 bytes aligned! No cache memory
 static uint8_t audio_read_buff[READ_BUFF_NUM][READ_BUFF_SIZE] __attribute((section("NC_BSS"),aligned(4)));
@@ -82,7 +83,7 @@ void grRobot_audio_stream_task(void const*) {
             mail_box.free(mail);
             if (error_c == -1) {
                 notifyMain_websocketClose(0);
-                DBG_INFO("error when sending\r\n");
+                DBG_INFO("\r\n");
                 Thread::wait(500);
                 ws.close();
                 isStreaming = false;
