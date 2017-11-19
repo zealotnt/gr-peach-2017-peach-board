@@ -181,6 +181,7 @@ int main_gr_robot() {
                         grRobot_SetLedRecording();
 
                         // websocket streaming voice command
+                        grRobot_audioEnableRead();
                         audioStreamTask.signal_set(0x1);
                         break;
 
@@ -189,6 +190,7 @@ int main_gr_robot() {
                         grRobot_SetLedRecording();
 
                         // make sure the streaming thread working
+                        grRobot_audioEnableRead();
                         audioStreamTask.signal_set(0x1);
                         break;
 

@@ -86,7 +86,7 @@ static void ledSet(ledColor_t color)
 
 void ledIdle()
 {
-    ledSet(COLOR_OFF);
+    ledSet(COLOR_BLUE);
 }
 
 void ledPlayingSound()

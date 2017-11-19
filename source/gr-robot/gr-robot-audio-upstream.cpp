@@ -43,11 +43,12 @@ extern Mail<mail_t, MAIL_QUEUE_SIZE> mail_box;
 extern void notifyMain_websocketClose(uint32_t reasonId);
 
 static void callback_audio_tans_end(void * p_data, int32_t result, void * p_app_data) {
-    mail_t *mail = mail_box.alloc();
-
     if (result < 0) {
+        printf("error with read thread!!!\r\n");
         return;
     }
+
+    mail_t *mail = mail_box.alloc();
     if (mail == NULL) {
         // consumer not consume fast enough, report error
         return;
