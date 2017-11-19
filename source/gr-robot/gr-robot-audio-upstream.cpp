@@ -73,6 +73,7 @@ void grRobot_audio_stream_task(void const*) {
         if (!connect_error) {
             DBG_INFO("error connecting to server\r\n");
             Thread::wait(500);
+            notifyMain_websocketClose(0);
             continue;
         }
 
@@ -84,6 +85,16 @@ void grRobot_audio_stream_task(void const*) {
             mail_box.free(mail);
             if (error_c == -1) {
                 ws.close();
+                Thread::wait(100);
+                notifyMain_websocketClose(0);
+                isStreaming = false;
+                break;
+            }
+
+            if (isButtonPressed()) {
+                DBG_INFO("Button pressed, close socket and stream again\r\n");
+                ws.close();
+                Thread::wait(500);
                 notifyMain_websocketClose(0);
                 isStreaming = false;
                 break;

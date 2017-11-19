@@ -127,13 +127,14 @@ typedef enum
     ACTION_IDLE = 0x00,
     ACTION_DONE_WW,
     ACTION_STREAM_CMD,
-    ACTION_DO_ACTION,
     ACTION_PLAY_AUDIO,
 } actionType_t;
 
 int main_gr_robot() {
     NetworkInterface* network = grInitEth();
     initPlayerConfig();
+    SYS_MAIL_ID mailId;
+    uint32_t mailParams[SYS_MAIL_PARAM_NUM];
 
     char serverRespStr[1024];
     serverJsonResp_t serverResParsed;
@@ -150,10 +151,6 @@ int main_gr_robot() {
 
     audioStreamTask.signal_set(0x1);
     while(1) {
-        SYS_MAIL_ID mailId;
-        uint32_t mailParams[SYS_MAIL_PARAM_NUM];
-        sysRecvMail(&mailId, &mailParams[0]);
-
         // currently there is only notify ws close, so no need to parse the mail
         // ask the server what to do next
         if (grHttpGet(network, "/", serverRespStr, sizeof(serverRespStr)) == false) {
@@ -215,5 +212,7 @@ int main_gr_robot() {
                 }
             }
         }
+
+        sysRecvMail(&mailId, &mailParams[0]);
     }
 }
