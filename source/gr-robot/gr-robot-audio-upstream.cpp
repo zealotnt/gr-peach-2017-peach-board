@@ -76,6 +76,7 @@ void grRobot_audio_stream_task(void const*) {
             notifyMain_websocketClose(0);
             continue;
         }
+        DBG_INFO("Ws voice streaming\r\n");
 
         while (isStreaming) {
             osEvent evt = mail_box.get();

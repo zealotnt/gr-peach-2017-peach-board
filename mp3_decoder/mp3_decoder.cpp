@@ -150,6 +150,13 @@ static void render_sample_block(short *sample_buff_ch0, short *sample_buff_ch1, 
     }
 }
 
+void waitWriteDone()
+{
+    uint8_t *p_buf = audio_write_buff[buff_index];
+    memset(p_buf, 0x00, AUDIO_WRITE_BUFF_SIZE);
+    grAudio()->write(p_buf, AUDIO_WRITE_BUFF_SIZE);
+}
+
 //This is the main mp3 decoding task. It will grab data from the input buffer FIFO in the SPI ram and
 //output it to the I2S port.
 void mp3_decoder_task(void const* pvParameters)
@@ -216,6 +223,7 @@ void mp3_decoder_task(void const* pvParameters)
     }
 
     abort:
+    waitWriteDone();
     // avoid noise
     renderer_zero_dma_buffer();
 
