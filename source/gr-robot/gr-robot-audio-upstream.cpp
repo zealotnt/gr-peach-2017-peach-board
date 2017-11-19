@@ -66,8 +66,6 @@ void grRobot_audio_stream_task(void const*) {
     Websocket ws(ADDRESS_WS_SERVER, network);
 
     while (1) {
-        Thread::signal_wait(0x1);
-
         isStreaming = true;
         DBG_INFO("Trying to connect\r\n");
         int connect_error = ws.connect();
@@ -108,6 +106,17 @@ void grRobot_audio_stream_task(void const*) {
 void grRobot_audioDisableRead()
 {
     isEnableRead = false;
+
+    while (1) {
+        osEvent evt = mail_box.get(1);
+        if (evt.status == osEventMail) {
+            mail_t *mail = (mail_t *)evt.value.p;
+            (void) mail_box.free(mail);
+        } else {
+            break;
+        }
+    }
+
     while (isReallyDisable == false) {
         Thread::wait(10);
     }

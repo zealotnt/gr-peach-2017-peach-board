@@ -127,6 +127,7 @@ typedef enum
     ACTION_IDLE = 0x00,
     ACTION_DONE_WW,
     ACTION_STREAM_CMD,
+    ACTION_PREPARE_PLAYING,
     ACTION_PLAY_AUDIO,
 } actionType_t;
 
@@ -142,6 +143,7 @@ int main_gr_robot() {
         "idle",
         "done-wake-word",
         "stream-cmd",
+        "prepare-playing",
         "play-audio",
         ""
     };
@@ -149,17 +151,17 @@ int main_gr_robot() {
     Thread audioStreamTask(grRobot_audio_stream_task, NULL, osPriorityNormal, 1024*32);
     Thread ledBlinkTask(grRobot_led_blinker_task, NULL, osPriorityNormal, 512*32);
 
-    audioStreamTask.signal_set(0x1);
     while(1) {
         // currently there is only notify ws close, so no need to parse the mail
         // ask the server what to do next
+        DBG_INFO(">>>>Before HttpGet>>>>\r\n");
         if (grHttpGet(network, "/", serverRespStr, sizeof(serverRespStr)) == false) {
             mainContinueGetAction();
             DBG_INFO("HTTP Get action fail\r\n");
             Thread::wait(500);
             continue;
         }
-        DBG_INFO("HttpGetSuccess!!!\r\n");
+        DBG_INFO("<<<<HttpGetSuccess<<<<\r\n");
         parseActionJson(serverRespStr, &serverResParsed);
         for (int i = 0; i < ARRAY_LEN(actionCmdStr); i++) {
             if (strcmp(serverResParsed.valueAction, actionCmdStr[i]) == 0) {
@@ -194,14 +196,23 @@ int main_gr_robot() {
                         audioStreamTask.signal_set(0x1);
                         break;
 
+                    case ACTION_PREPARE_PLAYING:
+                        // stop the streaming and recording
+                        grRobot_audioDisableRead();
+                        audioStreamTask.signal_clr(0x1);
+
+                        // set led playing audio
+                        grRobot_SetLedPreparePlaying();
+                        mainContinueGetAction();
+                        break;
+
                     case ACTION_PLAY_AUDIO:
+                        // stop the streaming and recording
+                        audioStreamTask.signal_clr(0x1);
                         grRobot_audioDisableRead();
 
                         // set led playing audio
                         grRobot_SetLedPlaying();
-
-                        // stop the streaming
-                        audioStreamTask.signal_clr(0x1);
 
                         // start the mp3 downloader, decoder and player
                         grRobot_mp3_player();

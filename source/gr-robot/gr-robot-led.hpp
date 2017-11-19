@@ -22,6 +22,7 @@ typedef enum
 
 void grRobot_led_blinker_task(void const*);
 void grRobot_SetLedIdle();
+void grRobot_SetLedPreparePlaying();
 void grRobot_SetLedPlaying();
 void grRobot_SetLedRecording();
 void grRobot_SetLedWwDetected();

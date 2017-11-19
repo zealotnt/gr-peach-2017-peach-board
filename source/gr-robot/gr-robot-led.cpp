@@ -22,6 +22,7 @@ typedef enum {
     LED_MAIL_WW_DETECTED,
     LED_MAIL_RECORDING,
     LED_MAIL_PLAYING,
+    LED_MAIL_PREPARE_PLAYING,
     LED_MAIL_IDLE,
     LED_MAILID_NUM
 } LED_MAIL_ID;
@@ -116,8 +117,17 @@ void ledWakewordDetected()
     }
 }
 
+void ledPreparePlaying()
+{
+    ledSet(COLOR_RED);
+}
+
 void grRobot_SetLedIdle() {
     send_led_mail(LED_MAIL_IDLE);
+}
+
+void grRobot_SetLedPreparePlaying() {
+    send_led_mail(LED_MAIL_PREPARE_PLAYING);
 }
 
 void grRobot_SetLedPlaying() {
@@ -151,6 +161,9 @@ void grRobot_led_blinker_task(void const*) {
                     break;
                 case LED_MAIL_WW_DETECTED:
                     ledFunc = ledWakewordDetected;
+                    break;
+                case LED_MAIL_PREPARE_PLAYING:
+                    ledFunc = ledPreparePlaying;
                     break;
                 default:
                     break;
