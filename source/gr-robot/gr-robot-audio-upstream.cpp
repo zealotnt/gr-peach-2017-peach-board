@@ -38,6 +38,7 @@ typedef struct {
 //4 bytes aligned! No cache memory
 static uint8_t audio_read_buff[READ_BUFF_NUM][READ_BUFF_SIZE] __attribute((section("NC_BSS"),aligned(4)));
 static bool isEnableRead = true;
+static bool isStreaming = true;
 static bool isReallyDisable = false;
 extern Mail<mail_t, MAIL_QUEUE_SIZE> mail_box;
 extern void notifyMain_websocketClose(uint32_t reasonId);
@@ -62,10 +63,11 @@ static void callback_audio_tans_end(void * p_data, int32_t result, void * p_app_
 
 void grRobot_audio_stream_task(void const*) {
     NetworkInterface* network = grInitEth();
-    bool isStreaming = true;
     Websocket ws(ADDRESS_WS_SERVER, network);
 
     while (1) {
+        Thread::signal_wait(0x1);
+
         isStreaming = true;
         DBG_INFO("Trying to connect\r\n");
         int connect_error = ws.connect();
@@ -78,7 +80,14 @@ void grRobot_audio_stream_task(void const*) {
         DBG_INFO("Ws voice streaming\r\n");
 
         while (isStreaming) {
-            osEvent evt = mail_box.get();
+            wait_mail:
+            osEvent evt = mail_box.get(10);
+            if (evt.status != osEventMail) {
+                if (isStreaming == false) {
+                    break;
+                }
+                goto wait_mail;
+            }
             mail_t *mail = (mail_t *)evt.value.p;
 
             int error_c = ws.send((uint8_t*)mail->p_data, mail->result);
@@ -107,6 +116,8 @@ void grRobot_audioDisableRead()
 {
     isEnableRead = false;
 
+    isStreaming = false;
+
     while (1) {
         osEvent evt = mail_box.get(1);
         if (evt.status == osEventMail) {
@@ -116,6 +127,8 @@ void grRobot_audioDisableRead()
             break;
         }
     }
+
+    Thread::wait(50);
 
     while (isReallyDisable == false) {
         Thread::wait(10);

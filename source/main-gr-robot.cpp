@@ -131,6 +131,9 @@ typedef enum
     ACTION_PLAY_AUDIO,
 } actionType_t;
 
+#define ENABLE_STREAM_AUDIO()       grRobot_audioEnableRead(); audioStreamTask.signal_set(0x1);
+#define DISABLE_STREAM_AUDIO()      audioStreamTask.signal_clr(0x1); grRobot_audioDisableRead();
+
 int main_gr_robot() {
     NetworkInterface* network = grInitEth();
     initPlayerConfig();
@@ -170,8 +173,7 @@ int main_gr_robot() {
                 {
                     case ACTION_IDLE:
                         // restart the websocket streaming and recording
-                        grRobot_audioEnableRead();
-                        audioStreamTask.signal_set(0x1);
+                        ENABLE_STREAM_AUDIO();
                         grRobot_SetLedIdle();
                         break;
 
@@ -183,8 +185,7 @@ int main_gr_robot() {
                         grRobot_SetLedRecording();
 
                         // websocket streaming voice command
-                        grRobot_audioEnableRead();
-                        audioStreamTask.signal_set(0x1);
+                        ENABLE_STREAM_AUDIO();
                         break;
 
                     case ACTION_STREAM_CMD:
@@ -192,14 +193,12 @@ int main_gr_robot() {
                         grRobot_SetLedRecording();
 
                         // make sure the streaming thread working
-                        grRobot_audioEnableRead();
-                        audioStreamTask.signal_set(0x1);
+                        ENABLE_STREAM_AUDIO();
                         break;
 
                     case ACTION_PREPARE_PLAYING:
                         // stop the streaming and recording
-                        grRobot_audioDisableRead();
-                        audioStreamTask.signal_clr(0x1);
+                        DISABLE_STREAM_AUDIO();
 
                         // set led playing audio
                         grRobot_SetLedPreparePlaying();
@@ -208,8 +207,7 @@ int main_gr_robot() {
 
                     case ACTION_PLAY_AUDIO:
                         // stop the streaming and recording
-                        audioStreamTask.signal_clr(0x1);
-                        grRobot_audioDisableRead();
+                        DISABLE_STREAM_AUDIO();
 
                         // set led playing audio
                         grRobot_SetLedPlaying();
