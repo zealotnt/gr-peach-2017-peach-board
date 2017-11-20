@@ -84,6 +84,7 @@ void grRobot_audio_stream_task(void const*) {
             osEvent evt = mail_box.get(10);
             if (evt.status != osEventMail) {
                 if (isStreaming == false) {
+                    ws.close();
                     break;
                 }
                 goto wait_mail;
