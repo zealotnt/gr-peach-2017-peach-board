@@ -134,6 +134,8 @@ bool Websocket::connect() {
     while (socket->connect(host, port) < 0) {
         ERR("Unable to connect to (%s) on port (%d)", host, port);
         wait(0.2);
+        delete socket;
+        socket = NULL;
         return false;
     }
 

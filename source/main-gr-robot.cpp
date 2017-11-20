@@ -45,7 +45,7 @@ static NodeManager *peachDeviceManager;
 bool parseActionJson(char* body, serverJsonResp_t *resp)
 {
     Json json (body, strlen (body));
-    char *keyAction = "action";
+    char *keyAction = "command";
 
     if(!json.isValidJson())
     {
@@ -124,7 +124,7 @@ void mainContinueGetAction()
 }
 
 
-static bool do_action(char* action, char* toStr)
+static bool grRobot_do_action(char* action, char* toStr)
 {
     printf("Action:%s\n", action);
     char *pt;
@@ -224,7 +224,7 @@ static bool processActionEndpoint(char* body)
         strncpy ( valueTo, valueStart, valueLength );
         valueTo [ valueLength ] = 0; // NULL-terminate the string
 
-        return do_action(valueAction,valueTo);
+        return grRobot_do_action(valueAction,valueTo);
     }
 
     return false;
@@ -269,9 +269,9 @@ int main_gr_robot() {
     if (peachDeviceManager->NodeStatusUpdate(DEV_1_IP, &status1) != 0) {
         printf("Can't update %s status\r\n", DEV_1_NAME);
     }
-//    if (peachDeviceManager->NodeStatusUpdate(DEV_2_IP, &status2) != 0) {
-//        printf("Can't update %s status\r\n", DEV_2_NAME);
-//    }
+    if (peachDeviceManager->NodeStatusUpdate(DEV_2_IP, &status2) != 0) {
+        printf("Can't update %s status\r\n", DEV_2_NAME);
+    }
     peachDeviceManager->PostNodeStatus(ADDRESS_HTTP_SERVER);
 
     // create the thread
@@ -344,14 +344,6 @@ int main_gr_robot() {
                         break;
 
                     case ACTION_GET_ACTION_JSON:
-                        DBG_INFO(">>>>Before HttpGetAction>>>>\r\n");
-                        if (grHttpGet(network, "/get-action", serverRespStr, sizeof(serverRespStr)) == false) {
-                            mainContinueGetAction();
-                            DBG_INFO("HTTP Get action fail\r\n");
-                            Thread::wait(500);
-                            continue;
-                        }
-                        DBG_INFO("<<<<HttpGetActionSuccess<<<<\r\n");
                         DBG_INFO("Get: %s\r\n", serverRespStr);
                         processActionEndpoint(serverRespStr);
                         break;
