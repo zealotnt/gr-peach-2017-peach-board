@@ -42,6 +42,16 @@ extern void grRobot_mp3_player();
 void notifyMain_websocketClose(uint32_t reasonId);
 static NodeManager *peachDeviceManager;
 
+/* Define for Camera */
+/* Threads */
+static Thread *    p_VideoCaptureTask = NULL;
+static Thread *    p_UserButtonTask = NULL;
+void video_capture_task(void);
+void faceRecognition();
+void init_video();
+int whoIsPersion(int time_ms);
+/* End define for camera */
+
 bool parseActionJson(char* body, serverJsonResp_t *resp)
 {
     Json json (body, strlen (body));
@@ -142,7 +152,10 @@ static bool grRobot_do_action(char* action, char* toStr)
             if( id >= 0)
             {
                 printf("IP: %s\n", peachDeviceManager->getIpDevice(id).c_str());
-                peachDeviceManager->NodeRelayOn(peachDeviceManager->getIpDevice(id));
+                if (peachDeviceManager->NodeRelayOn(peachDeviceManager->getIpDevice(id)) == 0)
+                    return true;
+                else
+                    return false;
             }
             else
                 printf("Dont know device!\n");
@@ -161,7 +174,10 @@ static bool grRobot_do_action(char* action, char* toStr)
             if( id >= 0)
             {
                 printf("IP: %s\n", peachDeviceManager->getIpDevice(id).c_str());
-                peachDeviceManager->NodeRelayOff(peachDeviceManager->getIpDevice(id));
+                if (peachDeviceManager->NodeRelayOff(peachDeviceManager->getIpDevice(id)) == 0)
+                    return true;
+                else
+                    return false;
             }
             else
                 printf("Dont know device!\n");
@@ -279,6 +295,13 @@ int main_gr_robot() {
     Thread audioStreamTask(grRobot_audio_stream_task, NULL, osPriorityNormal, 1024*32);
     Thread ledBlinkTask(grRobot_led_blinker_task, NULL, osPriorityNormal, 512*32);
 
+    // The added for load recognition
+    p_VideoCaptureTask = new Thread();
+    p_VideoCaptureTask->start(video_capture_task);
+    init_video();
+    faceRecognition();
+    // Start thread recognition
+
     while(1) {
         // currently there is only notify ws close, so no need to parse the mail
         // ask the server what to do next
@@ -306,13 +329,23 @@ int main_gr_robot() {
                         // done wake-word, print led
                         grRobot_SetLedWwDetected();
 
+                        // request who?
+                        if(whoIsPersion(500) != -1)
+                        {
+                            printf("Ok!\n");
+                            //Play_video(a);
+                        }
+                        else
+                        {
+                            printf("Not OK!\n");
+                        }
+
                         // streaming command, print led
                         grRobot_SetLedRecording();
 
                         // websocket streaming voice command
                         ENABLE_STREAM_AUDIO();
                         break;
-
                     case ACTION_STREAM_CMD:
                         // streaming command, print led
                         grRobot_SetLedRecording();
@@ -345,6 +378,7 @@ int main_gr_robot() {
 
                     case ACTION_GET_ACTION_JSON:
                         DBG_INFO("Get: %s\r\n", serverRespStr);
+
                         processActionEndpoint(serverRespStr);
                         break;
 

@@ -31,7 +31,6 @@
 #include "dec_wav.h"
 #include "grUtility.h"
 #include "grHwSetup.h"
-
 int main_wav_player_func() {
     printf("main_wav_player_func\r\n");
 
@@ -39,8 +38,9 @@ int main_wav_player_func() {
     grEnableAudio();
     grSetupUsb();
 
-    grPlayWavFile("NoiNayCoAnh.wav");
+    grPlayWavFile("/usb/team_member.wav");
     // grPlayWavFile("good_8khz.wav");
+    return 1;
 }
 
 int main_download_save_play() {
